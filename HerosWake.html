@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heroes Wake — A Tale of Choices</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+  :root{
+    --gold:#c9a45c; --gold-bright:#e8c87a; --parchment:#e8dcc0;
+    --parchment-dark:#c9b896; --shadow:#0d0a07; --blood:#8b2e22;
+    --pure:#6a8cb5; --corrupt:#7a3a5a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:#87a9c4;font-family:'EB Garamond',serif;color:var(--parchment);user-select:none;}
+  #c{position:fixed;inset:0;display:block;}
+
+  .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;z-index:100;}
+  .screen.active{display:flex;animation:fade .6s ease;}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .veil{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(20,15,10,.5),rgba(8,6,4,.92));z-index:90;display:none;}
+  .veil.active{display:block;}
+
+  #title{position:relative;}
+  .title-backdrop{position:absolute;inset:0;z-index:-1;
+    background:radial-gradient(ellipse 50% 40% at 50% 40%, rgba(8,6,4,.7), rgba(8,6,4,.4) 55%, transparent 75%);
+    pointer-events:none;}
+  h1.title{position:relative;font-family:'Cinzel';font-weight:900;font-size:clamp(3rem,9vw,7rem);letter-spacing:.15em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:.1em;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.95)) drop-shadow(0 0 26px rgba(201,164,92,.4));}
+  .subtitle{position:relative;font-style:italic;font-size:clamp(1rem,2.5vw,1.4rem);color:var(--parchment);letter-spacing:.1em;margin-bottom:2.5rem;text-shadow:0 1px 6px rgba(8,6,4,.95);}
+
+  .btn{font-family:'Cinzel';font-weight:500;font-size:1.05rem;letter-spacing:.06em;padding:.85rem 2.4rem;margin:.4rem;
+    background:linear-gradient(180deg,rgba(201,164,92,.18),rgba(201,164,92,.05));border:1px solid var(--gold);color:var(--gold-bright);
+    cursor:pointer;transition:all .25s;}
+  .btn:hover{background:linear-gradient(180deg,rgba(201,164,92,.36),rgba(201,164,92,.12));box-shadow:0 0 22px rgba(201,164,92,.3);transform:translateY(-2px);}
+  .btn.choice{display:block;width:100%;max-width:640px;text-align:left;font-family:'EB Garamond';font-size:1.12rem;text-transform:none;letter-spacing:.01em;}
+  .btn.good{border-color:var(--pure);color:#a8c4e5;}
+  .btn.good:hover{box-shadow:0 0 20px rgba(106,140,181,.4);background:rgba(106,140,181,.15);}
+  .btn.evil{border-color:var(--corrupt);color:#d4a0b8;}
+  .btn.evil:hover{box-shadow:0 0 20px rgba(122,58,90,.4);background:rgba(122,58,90,.15);}
+
+  .card{max-width:720px;background:linear-gradient(180deg,rgba(26,20,16,.97),rgba(16,12,9,.97));border:1px solid var(--gold);
+    box-shadow:0 24px 70px rgba(0,0,0,.7);padding:2.4rem 3rem;position:relative;z-index:101;}
+  .card::before{content:"";position:absolute;inset:8px;border:1px solid rgba(201,164,92,.25);pointer-events:none;}
+  .speaker{font-family:'Cinzel';font-size:.78rem;letter-spacing:.2em;color:var(--gold);margin-bottom:1rem;text-transform:uppercase;}
+  .body{font-size:1.22rem;line-height:1.7;margin-bottom:1.8rem;}
+  .body em{color:var(--gold-bright);font-style:italic;}
+
+  /* ===== In-world HUD ===== */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:60;display:none;}
+  #hud.active{display:block;}
+
+  /* health orb top-left (Fable-ish) */
+  #healthWrap{position:absolute;top:20px;left:20px;display:flex;align-items:center;gap:10px;}
+  .orb{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff7a6a,#8b1a14 70%);
+    box-shadow:0 0 0 3px rgba(201,164,92,.7),0 0 18px rgba(196,58,42,.5);position:relative;overflow:hidden;}
+  .orb .heart{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;}
+  #hpBarOuter{width:150px;height:14px;background:rgba(0,0,0,.5);border:1px solid var(--gold);border-radius:8px;overflow:hidden;}
+  #hpBar{height:100%;background:linear-gradient(90deg,#8b1a14,#e6453a);transition:width .35s;}
+
+  /* minimap top-right */
+  #minimap{position:absolute;top:18px;right:18px;width:120px;height:120px;border-radius:50%;
+    border:3px solid var(--gold);background:rgba(20,30,18,.7);box-shadow:0 0 20px rgba(0,0,0,.5);overflow:hidden;}
+  #minimap canvas{width:100%;height:100%;}
+
+  /* renown / morality pill right side */
+  #renown{position:absolute;top:150px;right:18px;width:130px;}
+  #alignName{font-family:'Cinzel';font-size:.62rem;letter-spacing:.13em;color:var(--gold);text-align:center;margin-bottom:3px;text-shadow:0 1px 3px #000;}
+  .moralBar{height:12px;border-radius:6px;border:1px solid var(--gold);position:relative;
+    background:linear-gradient(90deg,var(--corrupt),#2a2218 50%,var(--pure));}
+  .moralMark{position:absolute;top:-3px;width:3px;height:18px;background:var(--gold-bright);box-shadow:0 0 8px var(--gold-bright);transform:translateX(-50%);transition:left .5s;}
+
+  /* radial command wheel bottom-left */
+  #wheel{position:absolute;bottom:24px;left:24px;width:104px;height:104px;}
+  #wheel svg{width:100%;height:100%;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
+  .wedge{fill:rgba(26,20,12,.82);stroke:var(--gold);stroke-width:1.2;}
+  .wheel-ico{font-size:15px;}
+
+  /* level & gold bottom-right */
+  #stats{position:absolute;bottom:26px;right:24px;text-align:right;}
+  #stats .row{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:5px 0;text-shadow:0 1px 3px #000;}
+  #stats .lvl{font-family:'Cinzel';font-size:1.5rem;color:var(--gold-bright);}
+  .coin{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f5d97a,#b8862a);box-shadow:0 0 0 1px #6b4e16;}
+  #xpBarOuter{width:120px;height:7px;background:rgba(0,0,0,.5);border:1px solid var(--gold);border-radius:4px;overflow:hidden;margin-left:auto;}
+  #xpBar{height:100%;background:linear-gradient(90deg,#5a7a4a,#8ec46a);transition:width .4s;}
+
+  /* quest banner top-center */
+  #quest{position:absolute;top:18px;left:50%;transform:translateX(-50%);max-width:46%;text-align:center;}
+  #quest .qt{font-family:'Cinzel';font-size:.6rem;letter-spacing:.18em;color:var(--gold);text-shadow:0 1px 3px #000;}
+  #questText{font-style:italic;color:var(--parchment);text-shadow:0 1px 4px #000;font-size:.98rem;}
+
+  /* interaction prompt */
+  #prompt{position:absolute;bottom:50%;left:50%;transform:translate(-50%,50%);background:rgba(13,10,7,.85);
+    border:1px solid var(--gold);padding:.5rem 1.1rem;border-radius:6px;font-family:'Cinzel';font-size:.85rem;
+    letter-spacing:.08em;color:var(--gold-bright);display:none;}
+  #prompt kbd{background:rgba(201,164,92,.2);border:1px solid var(--gold);padding:1px 7px;border-radius:3px;}
+
+  #hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:.74rem;color:rgba(232,220,192,.45);text-align:center;line-height:1.6;}
+  #hint kbd{background:rgba(201,164,92,.15);border:1px solid rgba(201,164,92,.4);padding:1px 6px;border-radius:2px;font-family:monospace;color:var(--gold-bright);}
+
+  .fadeMsg{position:fixed;top:38%;left:50%;transform:translateX(-50%);font-family:'Cinzel';font-size:2.2rem;color:var(--gold-bright);
+    letter-spacing:.2em;text-shadow:0 0 24px #000;z-index:80;opacity:0;text-align:center;pointer-events:none;}
+
+  /* combat overlay */
+  #combat .card{max-width:560px;text-align:center;}
+  .enemyName{font-family:'Cinzel';font-size:1.3rem;color:var(--blood);letter-spacing:.08em;margin:.4rem 0;}
+  .ehpOuter{width:280px;height:16px;background:rgba(0,0,0,.6);border:1px solid var(--blood);margin:.4rem auto;border-radius:8px;overflow:hidden;}
+  .ehp{height:100%;background:linear-gradient(90deg,#6b1a14,#c43a2a);transition:width .3s;}
+  .clog{height:78px;overflow-y:auto;font-style:italic;color:var(--parchment-dark);line-height:1.5;margin:.8rem 0;font-size:.95rem;}
+  .cActs{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center;}
+  .cActs .btn{margin:.2rem;padding:.6rem 1.2rem;font-size:.95rem;}
+  .shake{animation:shk .3s;}
+  @keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  /* floating damage numbers */
+  .dmgnum{position:absolute;left:50%;top:0;transform:translateX(-50%);font-family:'Cinzel';font-weight:700;
+    pointer-events:none;z-index:30;text-shadow:0 2px 4px rgba(0,0,0,.7);white-space:nowrap;animation:floatUp 1s ease-out forwards;}
+  .dmgnum.dealt{color:#ffd24a;font-size:1.9rem;}      /* damage you deal */
+  .dmgnum.crit{color:#ff7a3a;font-size:2.5rem;}        /* your crits — bigger, hotter */
+  .dmgnum.taken{color:#ff5a4a;font-size:1.7rem;}       /* damage you take */
+  .dmgnum.heal{color:#7ac46a;font-size:1.7rem;}        /* healing */
+  @keyframes floatUp{0%{opacity:0;transform:translateX(-50%) translateY(6px) scale(.7);}
+    15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.1);}
+    30%{transform:translateX(-50%) translateY(-6px) scale(1);}
+    100%{opacity:0;transform:translateX(-50%) translateY(-46px) scale(.95);}}
+  /* hit flash on the enemy sprite */
+  .hitflash{animation:hitF .28s ease-out;}
+  @keyframes hitF{0%{filter:brightness(1);}30%{filter:brightness(3) saturate(.3);transform:scale(1.12);}100%{filter:brightness(1);transform:scale(1);}}
+  .loadwrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0d0a07;z-index:200;flex-direction:column;gap:1rem;}
+  .loadwrap .t{font-family:'Cinzel';color:var(--gold);letter-spacing:.2em;}
+  .spin{width:40px;height:40px;border:3px solid rgba(201,164,92,.3);border-top-color:var(--gold);border-radius:50%;animation:sp 1s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="veil" id="veil"></div>
+
+<!-- loading -->
+<div class="loadwrap" id="loader"><div class="spin"></div><div class="t">FORGING HEROES WAKE…</div></div>
+
+<!-- TITLE -->
+<div class="screen active" id="title">
+  <div class="title-backdrop"></div>
+  <h1 class="title">HEROES WAKE</h1>
+  <p class="subtitle">— Every choice leaves a mark —</p>
+  <button class="btn" id="continueBtn" style="display:none" onclick="UI.loadGame()">
+    Continue<br><span class="sub" style="font-family:'EB Garamond';font-size:.8rem;letter-spacing:.04em;color:var(--parchment-dark);text-transform:none;"></span>
+  </button>
+  <button class="btn" onclick="UI.startCreate()">Begin Your Tale</button>
+  <button class="btn" onclick="UI.show('lore')">The World of Heroes Wake</button>
+</div>
+
+<!-- LORE -->
+<div class="screen" id="lore">
+  <div class="card">
+    <div class="speaker">The Chronicle</div>
+    <p class="body" style="font-size:1.08rem;">
+      The land of <em>Ashglass</em> was scorched in a war between mortals and the Hollow Kings —
+      sorcerer-lords who feed on the deeds of the living. You are an <em>Emberborn</em>, marked at birth.
+      The world shapes itself around your choices. Walk in light, and the meek rally to you.
+      Walk in shadow, and the strong fear your name. Both roads lead to the Hollow Throne.
+    </p>
+    <button class="btn" onclick="UI.show('title')">Back</button>
+  </div>
+</div>
+
+<!-- CREATE -->
+<div class="screen" id="create">
+  <div class="card">
+    <div class="speaker">Before the Beginning</div>
+    <p class="body">Who do you wish to become?</p>
+    <button class="btn choice" onclick="Game.pickClass('warrior')"><strong>The Sellsword</strong> — strong of arm, hard to kill. <em>(+ATK +HP)</em></button>
+    <button class="btn choice" onclick="Game.pickClass('mage')"><strong>The Ashcaller</strong> — ember-magic, but frail. <em>(+MAG, fragile)</em></button>
+    <button class="btn choice" onclick="Game.pickClass('rogue')"><strong>The Vagrant</strong> — quick, lethal, lucky. <em>(+SPD +CRIT)</em></button>
+  </div>
+</div>
+
+<!-- EVENT -->
+<div class="screen" id="event">
+  <div class="card">
+    <div class="speaker" id="evSpeaker"></div>
+    <p class="body" id="evText"></p>
+    <div id="evChoices"></div>
+  </div>
+</div>
+
+<!-- COMBAT -->
+<div class="screen" id="combat">
+  <div class="card" id="combatCard">
+    <div class="speaker">Battle</div>
+    <div id="enemyAnchor" style="position:relative;display:inline-block;">
+      <div style="font-size:3.4rem;" id="enemyIco">⚔️</div>
+    </div>
+    <div class="enemyName" id="enemyName">Foe</div>
+    <div class="ehpOuter"><div class="ehp" id="ehp"></div></div>
+    <div class="clog" id="clog"></div>
+    <div class="cActs" id="cActs"></div>
+    <div style="margin-top:.7rem;font-size:.85rem;color:var(--parchment-dark);position:relative;" id="playerAnchor">Your HP: <span id="myHp" style="color:#e6453a;font-family:Cinzel;"></span></div>
+  </div>
+</div>
+
+<!-- ENDING -->
+<div class="screen" id="ending">
+  <div class="card" style="max-width:760px;">
+    <div class="speaker" id="endSpeaker">The End of the Tale</div>
+    <p class="body" id="endText"></p>
+    <button class="btn" onclick="location.reload()">Begin Anew</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="healthWrap">
+    <div class="orb"><div class="heart">❤</div></div>
+    <div id="hpBarOuter"><div id="hpBar"></div></div>
+  </div>
+  <div id="quest"><div class="qt">QUEST</div><div id="questText"></div></div>
+  <div id="minimap"><canvas id="mmcv" width="120" height="120"></canvas></div>
+  <div id="renown">
+    <div id="alignName">UNTESTED</div>
+    <div class="moralBar"><div class="moralMark" id="moralMark" style="left:50%"></div></div>
+  </div>
+  <div id="wheel">
+    <svg viewBox="0 0 100 100">
+      <path class="wedge" d="M50,50 L50,6 A44,44 0 0,1 88,32 Z"></path>
+      <path class="wedge" d="M50,50 L88,32 A44,44 0 0,1 72,90 Z"></path>
+      <path class="wedge" d="M50,50 L72,90 A44,44 0 0,1 28,90 Z"></path>
+      <path class="wedge" d="M50,50 L28,90 A44,44 0 0,1 12,32 Z"></path>
+      <path class="wedge" d="M50,50 L12,32 A44,44 0 0,1 50,6 Z"></path>
+      <circle cx="50" cy="50" r="13" fill="rgba(13,10,7,.9)" stroke="var(--gold)" stroke-width="1.2"/>
+      <text x="69" y="24" class="wheel-ico">⚔</text>
+      <text x="78" y="60" class="wheel-ico">🔥</text>
+      <text x="50" y="86" class="wheel-ico">💬</text>
+      <text x="20" y="60" class="wheel-ico">🛡</text>
+      <text x="30" y="24" class="wheel-ico">✨</text>
+    </svg>
+  </div>
+  <div id="stats">
+    <div class="row"><span class="lvl" id="lvlNum">1</span><span style="font-family:Cinzel;font-size:.7rem;color:var(--gold);">LVL</span></div>
+    <div class="row"><div id="xpBarOuter"><div id="xpBar"></div></div></div>
+    <div class="row"><span id="goldNum" style="font-family:Cinzel;color:var(--gold-bright);">0</span><span class="coin"></span></div>
+  </div>
+  <div id="prompt"><kbd>E</kbd> <span id="promptText">interact</span></div>
+  <div id="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>E</kbd> interact · drag to look</div>
+  <div id="savedTag" style="position:absolute;top:18px;left:50%;transform:translate(-50%,42px);font-family:'Cinzel';font-size:.62rem;letter-spacing:.18em;color:var(--gold-bright);opacity:0;transition:opacity .4s;text-shadow:0 1px 4px #000;pointer-events:none;">✦ SAVED</div>
+  <button id="menuBtn" onclick="UI.abandonRun()" title="Abandon run & return to title" style="position:absolute;top:18px;left:18px;transform:translateY(54px);pointer-events:auto;background:rgba(13,10,7,.7);border:1px solid var(--gold);color:var(--gold-bright);font-family:'Cinzel';font-size:.6rem;letter-spacing:.12em;padding:4px 9px;cursor:pointer;border-radius:4px;">⌂ TITLE</button>
+  <button id="pouchBtn" onclick="UI.toggleInv()" title="Inventory" style="position:absolute;bottom:26px;left:140px;pointer-events:auto;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6a4e2a,#3a2814);border:2px solid var(--gold);color:var(--gold-bright);font-size:24px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5);">🎒</button>
+</div>
+
+<!-- INVENTORY PANEL -->
+<div id="invPanel" style="display:none;position:fixed;inset:0;z-index:95;align-items:center;justify-content:center;">
+  <div style="position:absolute;inset:0;background:rgba(8,6,4,.82);" onclick="UI.toggleInv()"></div>
+  <div class="card" style="position:relative;max-width:680px;width:90%;">
+    <div class="speaker">Pouch &amp; Equipment</div>
+    <div id="invStats" style="font-size:.95rem;color:var(--parchment-dark);margin-bottom:1rem;"></div>
+    <div style="font-family:'Cinzel';font-size:.72rem;letter-spacing:.15em;color:var(--gold);margin-bottom:.5rem;">EQUIPPED</div>
+    <div id="invEquip" style="display:flex;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap;"></div>
+    <div style="font-family:'Cinzel';font-size:.72rem;letter-spacing:.15em;color:var(--gold);margin-bottom:.5rem;">POUCH</div>
+    <div id="invBag" style="display:flex;gap:.6rem;flex-wrap:wrap;min-height:60px;"></div>
+    <button class="btn" style="margin-top:1.4rem;" onclick="UI.toggleInv()">Close</button>
+  </div>
+</div>
+
+<div class="fadeMsg" id="fadeMsg"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =====================================================================
+//  ASHGLASS 3D — storybook third-person RPG (Three.js r128)
+// =====================================================================
+
+// ---------------- GAME STATE & CONTENT ----------------
+// ---------------- SAVE / LOAD (localStorage, with safe fallback) ----------------
+const Save=(function(){
+  const KEY='ashglass_save_v1';
+  function available(){
+    try{const t='__t';localStorage.setItem(t,t);localStorage.removeItem(t);return true;}
+    catch(e){return false;}
+  }
+  const ok=available();
+  function write(state){
+    if(!ok||!state||!state.cls)return false;
+    try{localStorage.setItem(KEY,JSON.stringify({v:1,t:Date.now(),s:state}));return true;}
+    catch(e){return false;}
+  }
+  function read(){
+    if(!ok)return null;
+    try{const raw=localStorage.getItem(KEY);if(!raw)return null;
+      const blob=JSON.parse(raw);
+      if(!blob||blob.v!==1||!blob.s||!blob.s.cls)return null;
+      return blob;
+    }catch(e){return null;}
+  }
+  function has(){return !!read();}
+  function clear(){try{localStorage.removeItem(KEY);}catch(e){}}
+  function meta(){const b=read();if(!b)return null;return {when:b.t,cls:b.s.cls,lvl:b.s.lvl,align:b.s.morality};}
+  return {available:ok, write, read, has, clear, meta};
+})();
+
+const Game = (function(){
+  let S;
+  function fresh(){return{
+    cls:null,lvl:1,xp:0,xpNext:20,
+    base:{atk:12,mag:8,spd:6,crit:.1,maxHp:100}, // class+level stats (gear adds on top)
+    hp:100,
+    equip:{weapon:null,armor:null,trinket:null}, // item ids
+    bag:{}, // itemId -> count (consumables)
+    gold:15,morality:0,flags:{},
+    quest:"Explore Hollowmere and find the road to the Throne.",
+    area:'village', done:{}, pos:{x:0,z:-2}, timeOfDay:0.18
+  };}
+
+  // ---- ITEM CATALOG ----
+  // slot: weapon|armor|trinket (equippable) or type:'consumable'
+  // bonus: {atk,mag,spd,crit,maxHp} added to base when equipped
+  const ITEMS={
+    // ===== WEAPONS =====
+    rusty_sword:{name:'Rusty Sword',slot:'weapon',ico:'🗡️',rarity:'common',bonus:{atk:3},desc:'+3 ATK'},
+    thief_dagger:{name:'Quick Dagger',slot:'weapon',ico:'🔪',rarity:'common',bonus:{atk:5,crit:.1},desc:'+5 ATK, +10% crit'},
+    ember_staff:{name:'Ember Staff',slot:'weapon',ico:'🔥',rarity:'common',bonus:{mag:10,atk:2},desc:'+10 MAG, +2 ATK'},
+    hand_axe:{name:'Hand Axe',slot:'weapon',ico:'🪓',rarity:'common',bonus:{atk:6},desc:'+6 ATK'},
+    whetstone_blade:{name:'Honed Blade',slot:'weapon',ico:'⚔️',rarity:'uncommon',bonus:{atk:8},desc:'+8 ATK'},
+    war_maul:{name:'War Maul',slot:'weapon',ico:'🔨',rarity:'uncommon',bonus:{atk:13},desc:'+13 ATK, heavy'},
+    twin_fangs:{name:'Twin Fangs',slot:'weapon',ico:'🗡️',rarity:'uncommon',bonus:{atk:7,crit:.18},desc:'+7 ATK, +18% crit'},
+    frost_brand:{name:'Frostbrand',slot:'weapon',ico:'❄️',rarity:'rare',bonus:{atk:12,mag:6},desc:'+12 ATK, +6 MAG'},
+    sunflare_rod:{name:'Sunflare Rod',slot:'weapon',ico:'☀️',rarity:'rare',bonus:{mag:20,crit:.08},desc:'+20 MAG, +8% crit'},
+    kingsbane:{name:'Kingsbane',slot:'weapon',ico:'⚔️',rarity:'legendary',bonus:{atk:18,crit:.15},desc:'+18 ATK, +15% crit'},
+    // ===== ARMOR =====
+    leather_jerkin:{name:'Leather Jerkin',slot:'armor',ico:'🥋',rarity:'common',bonus:{maxHp:20},desc:'+20 max HP'},
+    padded_coat:{name:'Padded Coat',slot:'armor',ico:'🧥',rarity:'common',bonus:{maxHp:28},desc:'+28 max HP'},
+    guard_mail:{name:"Guard's Mail",slot:'armor',ico:'🛡️',rarity:'uncommon',bonus:{maxHp:45},desc:'+45 max HP'},
+    ranger_garb:{name:"Ranger's Garb",slot:'armor',ico:'🥋',rarity:'uncommon',bonus:{maxHp:30,spd:3},desc:'+30 HP, +3 SPD'},
+    ember_plate:{name:'Ember Plate',slot:'armor',ico:'🛡️',rarity:'rare',bonus:{maxHp:65,atk:3},desc:'+65 HP, +3 ATK'},
+    wraithweave:{name:'Wraithweave',slot:'armor',ico:'🧥',rarity:'rare',bonus:{maxHp:50,mag:6},desc:'+50 HP, +6 MAG'},
+    aegis_of_dawn:{name:'Aegis of Dawn',slot:'armor',ico:'🛡️',rarity:'legendary',bonus:{maxHp:90,crit:.05},desc:'+90 HP, +5% crit'},
+    // ===== TRINKETS =====
+    pilgrim_charm:{name:"Pilgrim's Charm",slot:'trinket',ico:'📿',rarity:'common',bonus:{maxHp:15,crit:.05},desc:'+15 HP, +5% crit'},
+    swift_boots:{name:'Swift Boots',slot:'trinket',ico:'🥾',rarity:'common',bonus:{spd:6},desc:'+6 SPD'},
+    iron_ring:{name:'Iron Ring',slot:'trinket',ico:'💍',rarity:'uncommon',bonus:{atk:4,maxHp:10},desc:'+4 ATK, +10 HP'},
+    focus_stone:{name:'Focus Stone',slot:'trinket',ico:'🔷',rarity:'uncommon',bonus:{mag:8},desc:'+8 MAG'},
+    hawk_eye:{name:'Hawkeye Talisman',slot:'trinket',ico:'🦅',rarity:'rare',bonus:{crit:.2},desc:'+20% crit'},
+    heart_of_ash:{name:'Heart of Ash',slot:'trinket',ico:'💎',rarity:'rare',bonus:{maxHp:35,atk:5,mag:5},desc:'+35 HP, +5 ATK/MAG'},
+    crown_shard:{name:'Crown Shard',slot:'trinket',ico:'👑',rarity:'legendary',bonus:{atk:8,mag:8,spd:4,crit:.08},desc:'all stats up'},
+    // ===== CONSUMABLES =====
+    healing_tonic:{name:'Healing Tonic',type:'consumable',ico:'🧪',rarity:'common',desc:'Restore 60 HP',use(){heal(60);}},
+    greater_tonic:{name:'Greater Tonic',type:'consumable',ico:'🧪',rarity:'uncommon',desc:'Restore 130 HP',use(){heal(130);}},
+    ember_charm:{name:'Ember Charm',type:'consumable',ico:'✨',rarity:'uncommon',desc:'Heal 50% max HP (in combat)',combat:true,use(){const h=Math.round(eff().maxHp*.5);heal(h);return h;}},
+    elixir_might:{name:'Elixir of Might',type:'consumable',ico:'🧪',rarity:'rare',desc:'Permanently +4 ATK',use(){S.base.atk+=4;syncHp();UI.fade&&UI.fade('+4 ATK');return true;}},
+    elixir_vigor:{name:'Elixir of Vigor',type:'consumable',ico:'🧪',rarity:'rare',desc:'Permanently +25 max HP',use(){S.base.maxHp+=25;syncHp();S.hp+=25;UI.fade&&UI.fade('+25 MAX HP');return true;}},
+  };
+
+  // rarity ordering & per-area drop weighting (rarer loot in tougher areas)
+  const RARITY=['common','uncommon','rare','legendary'];
+  const AREA_WEIGHTS={
+    village:{common:70,uncommon:26,rare:4,legendary:0},
+    road:   {common:42,uncommon:40,rare:16,legendary:2},
+    throne: {common:18,uncommon:38,rare:36,legendary:8},
+  };
+  function rollLoot(area){
+    const w=AREA_WEIGHTS[area]||AREA_WEIGHTS.village;
+    // pick a rarity by weight
+    let total=0;for(const k in w)total+=w[k];
+    let roll=Math.random()*total, pickRarity='common';
+    for(const k of RARITY){ if(w[k]&&(roll-=w[k])<0){pickRarity=k;break;} }
+    // gather all items of that rarity, pick one at random
+    const pool=Object.keys(ITEMS).filter(id=>ITEMS[id].rarity===pickRarity);
+    const id=pool[Math.floor(Math.random()*pool.length)];
+    return id;
+  }
+
+  // ---- effective stats = base + equipped bonuses ----
+  function eff(){
+    const b=S.base;const r={atk:b.atk,mag:b.mag,spd:b.spd,crit:b.crit,maxHp:b.maxHp};
+    ['weapon','armor','trinket'].forEach(slot=>{
+      const id=S.equip[slot];if(id&&ITEMS[id]&&ITEMS[id].bonus){
+        const bo=ITEMS[id].bonus;for(const k in bo)r[k]=(r[k]||0)+bo[k];}
+    });
+    return r;
+  }
+  // keep S.maxHp in sync (used by HUD/heal); clamp hp if maxHp dropped
+  function syncHp(){const m=eff().maxHp;S.maxHp=m;if(S.hp>m)S.hp=m;}
+
+  let saveTimer=null;
+  function autosave(){
+    if(!S||!S.cls)return;
+    try{ if(typeof World!=='undefined' && World.getPos){const p=World.getPos();if(p){S.pos={x:p.x,z:p.z};}} }catch(e){}
+    if(Save.write(S)){ UI.flashSaved&&UI.flashSaved(); }
+  }
+  function queueSave(){ if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(autosave,300); }
+
+  function pickClass(c){
+    S=S||fresh(); S.cls=c;
+    if(c==='warrior'){S.base={atk:16,mag:8,spd:6,crit:.1,maxHp:130};}
+    if(c==='mage'){S.base={atk:8,mag:20,spd:6,crit:.1,maxHp:80};}
+    if(c==='rogue'){S.base={atk:13,mag:8,spd:12,crit:.3,maxHp:95};}
+    // no starting weapon — the hero begins unarmed and must buy or craft one
+    S.maxHp=eff().maxHp;S.hp=S.maxHp;
+    UI.beginWorld();
+    queueSave();
+  }
+  function startNew(){ S=fresh(); }
+
+  function loadState(blob){
+    if(!blob||!blob.s)return false;
+    // reject saves from before the equipment system (they lack base/equip/bag)
+    if(!blob.s.base||!blob.s.equip||!blob.s.bag)return false;
+    S=Object.assign(fresh(), blob.s);
+    if(!S.pos)S.pos={x:0,z:-2};
+    if(!S.flags)S.flags={}; if(!S.done)S.done={};
+    syncHp();
+    return true;
+  }
+
+  function owns(id){ return S.equip.weapon===id||S.equip.armor===id||S.equip.trinket===id||!!S.bag[id]; }
+  // ---- inventory ops ----
+  function giveItem(id,n){ if(!ITEMS[id])return; const it=ITEMS[id];
+    if(it.type==='consumable'){ S.bag[id]=(S.bag[id]||0)+(n||1); }
+    else { // equippable: auto-equip if slot empty or strictly better, else store in bag as owned
+      if(!S.equip[it.slot]){ S.equip[it.slot]=id; }
+      else { S.bag[id]=(S.bag[id]||0)+(n||1); }
+    }
+    syncHp();UI.hud();queueSave();
+  }
+  function equip(id){ const it=ITEMS[id];if(!it||it.type==='consumable')return;
+    const cur=S.equip[it.slot];
+    S.equip[it.slot]=id;
+    // move the swapped-out item into the bag as owned gear
+    if(S.bag[id])S.bag[id]--; if(S.bag[id]<=0)delete S.bag[id];
+    if(cur)S.bag[cur]=(S.bag[cur]||0)+1;
+    syncHp();UI.hud();queueSave();
+    // a weapon change alters the hero's visible (back-mounted) weapon — rebuild the model
+    if(it.slot==='weapon' && typeof World!=='undefined' && World.rebuildHero){ World.rebuildHero(); }
+  }
+  function useItem(id,inCombat){ const it=ITEMS[id];if(!it||it.type!=='consumable')return false;
+    if(!S.bag[id])return false;
+    if(it.combat&&!inCombat&&it.combatOnly)return false;
+    const res=it.use?it.use():null;
+    S.bag[id]--; if(S.bag[id]<=0)delete S.bag[id];
+    UI.hud();queueSave();return res!=null?res:true;
+  }
+
+  // ---- progression ----
+  function addMorality(n){S.morality=Math.max(-100,Math.min(100,S.morality+n));UI.hud();queueSave();}
+  function addGold(n){S.gold+=n;UI.hud();queueSave();}
+  function addXP(n){
+    S.xp+=n;
+    while(S.xp>=S.xpNext){S.xp-=S.xpNext;S.lvl++;S.xpNext=Math.round(S.xpNext*1.6);
+      S.base.maxHp+=18;S.base.atk+=3;S.base.mag+=3;S.base.spd+=1;syncHp();S.hp=S.maxHp;UI.fade('LEVEL '+S.lvl);}
+    UI.hud();queueSave();
+  }
+  function heal(n){S.hp=Math.min(S.maxHp,S.hp+n);UI.hud();}
+  function alignName(){const m=S.morality;
+    if(m>=70)return'RADIANT';if(m>=30)return'KIND';if(m>10)return'DECENT';
+    if(m>=-10)return'UNTESTED';if(m>-30)return'CALLOUS';if(m>-70)return'WICKED';return'HOLLOW';}
+
+  // ---- NPC / interaction definitions (placed in 3D world) ----
+  // each: id, label, pos[x,z], color, type, event
+  const NPCS = [
+    {id:'elder', label:'Village Elder', pos:[0,-6], color:0x8a7a5a, event:'village_elder'},
+    {id:'child', label:'Hungry Child', pos:[-10,2], color:0x9a8a6a, event:'hungry_child'},
+    {id:'merchant', label:'Merchant', pos:[11,-2], color:0x7a5a8a, event:'merchant_shop'},
+    {id:'thief', label:'Cornered Thief', pos:[-12,-9], color:0x6a6a5a, event:'thief_caught'},
+    {id:'guard', label:'Drunk Guard', pos:[13,8], color:0x5a6a7a, event:'drunk_guard'},
+    {id:'healer', label:'Plague House', pos:[-6,11], color:0x8a4a4a, event:'plague_house'},
+    {id:'wizard', label:'Hooded Wizard', pos:[6,-12], color:0x4a3a8a, event:'wizard_teach'},
+    {id:'shrine', label:'Old Shrine', pos:[8,13], color:0xc9a45c, event:'shrine', shrine:true},
+    {id:'captive', label:'Caged Mercenary', pos:[-16,-2], color:0x6a5a3a, event:'recruit_bram'},
+    {id:'wolves', label:'Wolf Den', pos:[16,-9], color:0x6a6a6a, event:'wolf_den', foe:true},
+    {id:'brute', label:'Road Brute', pos:[-15,15], color:0x7a3a2a, event:'brute_fight', foe:true},
+    {id:'wraith', label:'Haunted Well', pos:[15,14], color:0x8a8acc, event:'wraith_fight', foe:true},
+    {id:'gate', label:'South Gate', pos:[0,20], color:0x4a3a2a, event:'gate_check', gate:true},
+  ];
+
+  const EVENTS = {
+    intro:{speaker:'A Voice in the Smoke',
+      text:"You arrive at the edge of <em>Hollowmere</em>, smoke still on the wind. A voice — neither kind nor cruel — whispers: <em>\"The Hollow Throne waits beyond the south gate. What you become on the road there is yours to decide.\"</em>",
+      choices:[{t:"Step into the village.",go:close}]},
+
+    village_elder:{speaker:'The Village Elder',
+      text:()=>{let t="A weary old man bows. <em>\"Emberborn. The Hollow King's herald demands a tribute of children by the new moon, or he razes Hollowmere. ";
+        if(S.morality>=30)t+="Word of a kind soul on the road reached us. Will you face him at the south gate?\"</em>";
+        else if(S.morality<=-30)t+="They say something cruel walks among us. Are you here to help — or to feast?\"</em>";
+        else t+="Will you help us, stranger?\"</em>";return t;},
+      choices:[
+        {t:"\"I'll face the Hollow King.\"",cls:'good',fn(){addMorality(8);S.flags.gateOpen=true;S.quest="Pass through the south gate to the Throne.";
+          dialog('The Village Elder',"<em>\"Then there is hope yet.\"</em> He unbars the south gate.",[{t:"Continue.",go:close}]);}},
+        {t:"\"What's in it for me?\"",fn(){S.flags.gateOpen=true;S.quest="Pass through the south gate to the Throne.";
+          dialog('The Village Elder',"<em>\"Everything we have. It isn't much.\"</em> He opens the gate.",[{t:"Continue.",go:close}]);}},
+        {t:"\"Maybe I'll take the tribute myself.\"",cls:'evil',fn(){addMorality(-12);S.flags.gateOpen=true;S.quest="Claim power at the Hollow Throne (south gate).";
+          dialog('The Village Elder',"He recoils. <em>\"...Then you are already lost.\"</em> The gate opens regardless.",[{t:"Continue.",go:close}]);}},
+      ]},
+
+    hungry_child:{speaker:'A Hungry Child',
+      text:"A thin child clutches an empty bowl. <em>\"Spare a coin? Mama hasn't woken in two days…\"</em>",
+      choices:[
+        {t:"Give 20 gold.",cls:'good',fn(){if(S.gold>=20){addGold(-20);addMorality(14);S.flags.kindRep=true;dialog('A Hungry Child',"Her face lights like dawn. <em>\"The Light keep you!\"</em>",[{t:"Continue.",go:close}]);}else dialog('A Hungry Child',"Your purse is too light. She nods, unsurprised.",[{t:"Continue.",go:close}]);}},
+        {t:"Give a few coppers.",fn(){if(S.gold>=5){addGold(-5);addMorality(4);}dialog('A Hungry Child',"<em>\"...Thank you.\"</em>",[{t:"Continue.",go:close}]);}},
+        {t:"Snatch the bowl, sell it.",cls:'evil',fn(){addMorality(-14);addGold(2);S.flags.cruelRep=true;dialog('A Hungry Child',"She wails as you take even this. The street watches. <em>(+2 gold)</em>",[{t:"Continue.",go:close}]);}},
+      ]},
+
+    merchant_shop:{speaker:'Wandering Merchant',
+      text:()=>S.flags.merchantKind?"<em>\"The kind one! For you — half price, always.\"</em> He spreads out tonics, blades, and armor.":"A merchant lays out wares — tonics, blades, armor. <em>\"Coin first, then talk.\"</em>",
+      choices:[
+        {t:()=>"Healing Tonic — "+(S.flags.merchantKind?8:15)+"g",fn(){const c=S.flags.merchantKind?8:15;if(S.gold>=c){addGold(-c);giveItem('healing_tonic',1);dialog('Wandering Merchant',"A tonic for the road. <em>(Added to your pouch)</em>",[{t:"Buy more / leave.",go(){fireEvent('merchant_shop');}}]);}else dialog('Wandering Merchant',"<em>\"No coin, no cure.\"</em>",[{t:"Continue.",go:close}]);}},
+        {t:()=>"Rusty Sword — "+(S.flags.merchantKind?5:10)+"g",show:()=>!owns('rusty_sword'),fn(){const c=S.flags.merchantKind?5:10;if(S.gold>=c){addGold(-c);giveItem('rusty_sword',1);dialog('Wandering Merchant',"A worn but serviceable blade — every hero starts somewhere. <em>(Check your pouch to equip)</em>",[{t:"Continue.",go(){fireEvent('merchant_shop');}}]);}else dialog('Wandering Merchant',"<em>\"Even rust costs coin, friend.\"</em>",[{t:"Continue.",go:close}]);}},
+        {t:()=>"Honed Blade — "+(S.flags.merchantKind?22:45)+"g",show:()=>!owns('whetstone_blade'),fn(){const c=S.flags.merchantKind?22:45;if(S.gold>=c){addGold(-c);giveItem('whetstone_blade',1);dialog('Wandering Merchant',"A finely honed blade. <em>(Check your pouch to equip)</em>",[{t:"Continue.",go(){fireEvent('merchant_shop');}}]);}else dialog('Wandering Merchant',"<em>\"Come back with coin.\"</em>",[{t:"Continue.",go:close}]);}},
+        {t:()=>"Leather Jerkin — "+(S.flags.merchantKind?18:35)+"g",show:()=>!owns('leather_jerkin'),fn(){const c=S.flags.merchantKind?18:35;if(S.gold>=c){addGold(-c);giveItem('leather_jerkin',1);dialog('Wandering Merchant',"Sturdy leather. <em>(+20 max HP when worn)</em>",[{t:"Continue.",go(){fireEvent('merchant_shop');}}]);}else dialog('Wandering Merchant',"<em>\"Come back with coin.\"</em>",[{t:"Continue.",go:close}]);}},
+        {t:"Rob him.",cls:'evil',fn(){dialog('Wandering Merchant',"<em>\"You DARE—\"</em> He draws a dagger.",[{t:"Fight.",go(){combat('bandit',()=>{addMorality(-14);addGold(60);giveItem('guard_mail',1);S.done.merchant=true;dialog('Wandering Merchant',"His wares are yours — coin and a coat of mail. <em>(+60 gold, Guard's Mail)</em>",[{t:"Continue.",go:close}]);});}}]);}},
+        {t:"Leave.",go:close},
+      ]},
+
+    thief_caught:{speaker:'A Cornered Thief',
+      text:"A crowd corners a ragged thief who stole bread. <em>\"String him up!\"</em> He looks at you, desperate. <em>\"I only wanted to eat…\"</em>",
+      choices:[
+        {t:"Pay for the bread, free him.",cls:'good',fn(){if(S.gold>=10){addGold(-10);addMorality(12);dialog('A Cornered Thief',"The crowd disperses. He weeps thanks. <em>(-10 gold)</em>",[{t:"Continue.",go:close}]);}else{addMorality(6);dialog('A Cornered Thief',"You haven't the coin, so you talk the crowd down. (+6 morality)",[{t:"Continue.",go:close}]);}}},
+        {t:"Join the mob.",cls:'evil',fn(){addMorality(-12);dialog('A Cornered Thief',"You urge them on. It ends badly for him. The crowd cheers your cruelty.",[{t:"Continue.",go:close}]);}},
+        {t:"Walk away.",fn(){addMorality(-2);close();}},
+      ]},
+
+    drunk_guard:{speaker:'A Drunk Guard',
+      text:"A guard slumps, reeking of ale. <em>\"Hic— the King's herald comes through the south gate at night. Terrible thing…\"</em> His purse hangs loose, and good boots sit by his feet.",
+      choices:[
+        {t:"Help him home.",cls:'good',fn(){addMorality(8);giveItem('swift_boots',1);dialog('A Drunk Guard',"You haul him to his door. His wife presses his spare swift boots on you in thanks. <em>(Swift Boots — +6 SPD)</em>",[{t:"Continue.",go:close}]);}},
+        {t:"Lift his purse.",cls:'evil',fn(){addMorality(-8);addGold(18);dialog('A Drunk Guard',"He never feels it. <em>(+18 gold)</em>",[{t:"Continue.",go:close}]);}},
+        {t:"Leave him.",go:close},
+      ]},
+
+    plague_house:{speaker:'A Plague House',
+      text:"A house marked with a red cross; moans within. A healer shakes her head. <em>\"Without 30 gold for tonics, this family dies by morning.\"</em>",
+      choices:[
+        {t:"Pay for medicine — 30g.",cls:'good',fn(){if(S.gold>=30){addGold(-30);addMorality(16);addXP(10);S.flags.kindRep=true;giveItem('healing_tonic',2);dialog('A Plague House',"By dawn the fever breaks. The family lives, and the healer fills your pouch with tonics. <em>(+2 Healing Tonics)</em>",[{t:"Continue.",go:close}]);}else dialog('A Plague House',"You cannot afford it. The healer turns away grimly.",[{t:"Continue.",go:close}]);}},
+        {t:"\"Not my problem.\"",cls:'evil',fn(){addMorality(-8);dialog('A Plague House',"You walk on. The moans follow you down the street.",[{t:"Continue.",go:close}]);}},
+        {t:"Leave quietly.",go:close},
+      ]},
+
+    wizard_teach:{speaker:'A Hooded Wizard',
+      text:()=>{
+        if(S.cls!=='mage') return "An old wizard studies you with milky eyes. <em>\"You carry steel, not spellcraft. The ember-flame would only burn you. Go — your path is the blade's.\"</em>";
+        if(S.flags.learnedMagic) return "<em>\"The ember-flame answers you now. Use it wisely — focus is finite.\"</em>";
+        return "A hooded wizard warms his hands at a flame that floats above his palm. <em>\"Ashcaller. I feel the gift smoldering in you, untaught. Kneel, and I will wake the ember-flame within.\"</em>";
+      },
+      choices:()=>{
+        if(S.cls!=='mage') return [{t:"Nod and leave.",go:close}];
+        if(S.flags.learnedMagic) return [{t:"Thank him.",go:close}];
+        return [
+          {t:"\"Teach me the ember-flame.\"",cls:'good',fn(){S.flags.learnedMagic=true;addXP(8);
+            dialog('A Hooded Wizard',"He presses two fingers to your brow. Heat blooms behind your eyes — and a flame leaps to your own palm. <em>You have learned </em><strong>Ember Blast</strong><em>! (usable in battle)</em>",[{t:"Continue.",go:close}]);}},
+          {t:"\"Not now.\"",go:close},
+        ];
+      }},
+
+    shrine:{speaker:'A Crumbling Shrine',
+      text:"An old shrine to the Light, half-swallowed by moss. An offering bowl holds three coins, and a faded charm rests beside it.",
+      choices:[
+        {t:"Leave an offering (10g).",cls:'good',fn(){if(S.gold>=10){addGold(-10);addMorality(12);heal(30);if(!owns('pilgrim_charm'))giveItem('pilgrim_charm',1);dialog('A Crumbling Shrine',"Warmth knits your wounds, and the pilgrim's charm warms in answer. <em>(healed 30; Pilgrim's Charm)</em>",[{t:"Continue.",go:close}]);}else{addMorality(4);dialog('A Crumbling Shrine',"You bow your head instead. (+4 morality)",[{t:"Continue.",go:close}]);}}},
+        {t:"Take the coins & charm.",cls:'evil',fn(){addMorality(-10);addGold(3);giveItem('ember_charm',1);dialog('A Crumbling Shrine',"The coins are cold, the charm colder. Something <em>notices</em> you. <em>(+3 gold, Ember Charm)</em>",[{t:"Continue.",go:close}]);}},
+        {t:"Pray, take nothing.",fn(){addMorality(2);close();}},
+      ]},
+
+    recruit_bram:{speaker:'A Caged Mercenary',
+      text:()=>S.flags.companion?"<em>\"Still breathing, are we? Lead on.\"</em> Bram leans on his axe, ready.":"A broad-shouldered man paces inside a bandit cage. <em>\"Name's Bram. Sellsword, mostly. These dogs caught me sleeping. Free me and my axe is yours till the Throne — I don't much care which way your heart leans.\"</em>",
+      choices:()=>S.flags.companion?[{t:"\"Stay close.\"",go:close}]:[
+        {t:"Free him — \"Fight beside me.\"",fn(){S.flags.companion=true;S.flags.companionName='Bram';addXP(6);
+          dialog('Bram the Sellsword',"He shoulders the cage door off its hinges. <em>\"Hah! Knew you had sense. Lead on — I'll carve anything that comes at us.\"</em> <em>(Bram now fights at your side in battle.)</em>",[{t:"Continue.",go:close}]);}},
+        {t:"\"What's the catch?\"",fn(){dialog('A Caged Mercenary',"<em>\"Catch is I die in here otherwise. No tricks. A blade at your back, that's all.\"</em>",[
+          {t:"Free him.",go(){S.flags.companion=true;S.flags.companionName='Bram';dialog('Bram the Sellsword',"<em>\"Now we're talking.\"</em> <em>(Bram joins you in combat.)</em>",[{t:"Continue.",go:close}]);}},
+          {t:"Leave him caged.",cls:'evil',go(){addMorality(-6);close();}},
+        ]);}},
+        {t:"Leave him to rot.",cls:'evil',fn(){addMorality(-8);dialog('A Caged Mercenary',"<em>\"...Cold. You'll regret that on the road.\"</em>",[{t:"Continue.",go:close}]);}},
+      ]},
+
+    wolf_den:{speaker:'A Wolf Den',
+      text:"Yellow eyes glint from a hollow beneath the rocks. Three grey wolves rise, hackles up, circling. There's no talking your way past these.",
+      choices:[
+        {t:"Stand and fight the pack.",fn(){combat('wolfpack',()=>{addXP(16);addGold(12);S.done.wolves=true;dialog('A Wolf Den',"The pack breaks and scatters into the dark. <em>(+16 XP, +12 gold)</em>",[{t:"Continue.",go:close}]);});}},
+        {t:"Back away slowly.",go:close},
+      ]},
+
+    brute_fight:{speaker:'A Hollow Brute',
+      text:"A hulking, ash-grey thing blocks the path, dragging a club the size of a man. It has no eyes — only a wide, lipless grin. <em>It has been waiting for something to crush.</em>",
+      choices:[
+        {t:"Meet it head-on.",fn(){combat('brute',()=>{addXP(22);addGold(20);S.done.brute=true;if(!owns('guard_mail'))giveItem('guard_mail',1);dialog('A Hollow Brute',"It topples like a felled oak. Among its hoard: a coat of mail. <em>(+22 XP, +20 gold, Guard's Mail)</em>",[{t:"Continue.",go:close}]);});}},
+        {t:"Find another way around.",go:close},
+      ]},
+
+    wraith_fight:{speaker:'A Haunted Well',
+      text:"Cold mist pours from an old well. A figure of smoke and grief rises — an Ash Wraith. <em>It flinches from steel but drinks deep of flame; magic seems to wash through it.</em>",
+      choices:[
+        {t:"Banish it.",fn(){combat('wraith',()=>{addXP(20);addGold(16);S.done.wraith=true;if(!owns('pilgrim_charm'))giveItem('pilgrim_charm',1);dialog('A Haunted Well',"The wraith unravels into harmless mist. A pilgrim's charm rests at the well's lip. <em>(+20 XP, +16 gold, Pilgrim's Charm)</em>",[{t:"Continue.",go:close}]);});}},
+        {t:"Leave the well be.",go:close},
+      ]},
+
+    gate_check:{speaker:'The South Gate',
+      text:()=>S.flags.gateOpen?"The great gate stands open. Beyond it, the road darkens toward the <em>Hollow Throne</em>. There is no coming back the same.":"The south gate is barred from the far side. <em>Perhaps the Village Elder can open it.</em>",
+      choices:()=>S.flags.gateOpen?
+        [{t:"Walk the road to the Throne.",go(){close();UI.fade('THE HOLLOW THRONE');setTimeout(()=>fireEvent('final'),1400);}},{t:"Not yet.",go:close}]
+        :[{t:"Turn back.",go:close}]},
+
+    final:{speaker:'The Hollow King',
+      text:()=>{let t="On a throne of fused black glass sits the Hollow King — a crowned silhouette of smoke and hunger. <em>\"Emberborn. I have tasted every choice you made.\"</em><br><br>";
+        if(S.morality>=40)t+="<em>\"Such tiresome light in you. Devouring you will be all the sweeter.\"</em>";
+        else if(S.morality<=-40)t+="<em>\"You reek of cruelty. We are kin. Kneel, and rule beside me.\"</em>";
+        else t+="<em>\"Grey. Undecided. There is no staying clean before me.\"</em>";return t;},
+      choices:[
+        {t:"\"I came to end you.\"",cls:'good',fn(){dialog('The Hollow King',"<em>\"Then COME.\"</em> The throne erupts in black flame.",[{t:"Fight the Hollow King.",go(){combat('hollowking',()=>ending());}}]);}},
+        {t:"\"...Make me a king of ash.\"",cls:'evil',show:()=>S.morality<=-40,fn(){ending('betray');}},
+        {t:"\"I won't kneel — but I won't die clean.\" (Fight)",fn(){dialog('The Hollow King',"<em>\"How human.\"</em> Black flame rises.",[{t:"Fight.",go(){combat('hollowking',()=>ending());}}]);}},
+      ]},
+  };
+
+  // ---- dialog plumbing ----
+  function fireEvent(id){const ev=EVENTS[id];if(!ev)return;
+    dialog(ev.speaker, typeof ev.text==='function'?ev.text():ev.text,
+           typeof ev.choices==='function'?ev.choices():ev.choices);}
+  function dialog(speaker,text,choices){UI.show('event');UI.veilOn();
+    document.getElementById('evSpeaker').textContent=speaker;
+    document.getElementById('evText').innerHTML=text;
+    const box=document.getElementById('evChoices');box.innerHTML='';
+    choices.forEach(c=>{if(c.show&&!c.show())return;
+      const b=document.createElement('button');b.className='btn choice'+(c.cls?' '+c.cls:'');
+      b.innerHTML=typeof c.t==='function'?c.t():c.t;
+      b.onclick=()=>{if(c.fn)c.fn();else if(c.go)c.go();};box.appendChild(b);});}
+  function close(){UI.show(null);UI.veilOff();UI.hud();World.resume();queueSave();}
+
+  // ---- combat ----
+  // single-foe templates + multi-foe encounter groups
+  const ENEMIES={
+    bandit:{name:'Highway Bandit',ico:'🗡️',hp:90,atk:13,hpL:14,atkL:3},
+    wolf:{name:'Grey Wolf',ico:'🐺',hp:34,atk:8,hpL:6,atkL:2},
+    brute:{name:'Hollow Brute',ico:'👹',hp:160,atk:24,hpL:18,atkL:4},
+    wraith:{name:'Ash Wraith',ico:'👻',hp:130,atk:19,hpL:14,atkL:3,magResist:0.45},
+    hollowking:{name:'The Hollow King',ico:'👑',hp:270,atk:21,hpL:11,atkL:3},
+  };
+  // an encounter is a list of enemy keys (with optional count)
+  const ENCOUNTERS={
+    bandit:['bandit'],
+    wolfpack:['wolf','wolf','wolf'],
+    brute:['brute'],
+    wraith:['wraith'],
+    banditpair:['bandit','bandit'],
+    hollowking:['hollowking'],
+  };
+
+  let C=null,defending=false,mana=0;
+
+  function makeFoe(key){
+    const t=ENEMIES[key];
+    return {key,name:t.name,ico:t.ico,
+      hp:t.hp+(S.lvl-1)*(t.hpL||0), maxHp:t.hp+(S.lvl-1)*(t.hpL||0),
+      atk:t.atk+(S.lvl-1)*(t.atkL||0), magResist:t.magResist||0};
+  }
+
+  function combat(which,onWin){
+    // accept a single enemy key OR an encounter key
+    const list = ENCOUNTERS[which] ? ENCOUNTERS[which] : [which];
+    const foes = list.map(makeFoe);
+    const comp = S.flags.companion ? {name:companionName(),atk:7+S.lvl*2,hp:40+S.lvl*10,maxHp:40+S.lvl*10,alive:true} : null;
+    C={foes,comp,onWin,target:0};
+    mana=(S.cls==='mage'&&S.flags.learnedMagic)?(3+(S.lvl-1)):0;
+    UI.show('combat');UI.veilOn();
+    const lead=foes[0];
+    document.getElementById('enemyIco').textContent=lead.ico;
+    document.getElementById('enemyName').textContent= foes.length>1 ? (lead.name+' ×'+foes.length) : lead.name;
+    clog((foes.length>1?foes.length+' foes block your path!':'A '+lead.name+' stands before you!')+(comp?' '+comp.name+' fights at your side.':''),true);
+    renderC();
+  }
+  function aliveFoes(){return C.foes.filter(f=>f.hp>0);}
+  function leadFoe(){return aliveFoes()[0];}
+
+  function renderC(){
+    const lead=leadFoe()||C.foes[0];
+    document.getElementById('ehp').style.width=Math.max(0,lead.hp/lead.maxHp*100)+'%';
+    document.getElementById('enemyIco').textContent=lead.ico;
+    const n=aliveFoes().length;
+    document.getElementById('enemyName').textContent= n>1 ? (lead.name+'  ('+n+' left)') : lead.name;
+    let hpLine=Math.max(0,Math.round(S.hp))+'/'+S.maxHp;
+    const knowsMagic = (S.cls==='mage' && S.flags.learnedMagic);
+    if(knowsMagic)hpLine+='  ·  Focus '+mana;
+    if(C.comp)hpLine+='  ·  '+C.comp.name+' '+(C.comp.alive?Math.max(0,Math.round(C.comp.hp)):'down');
+    document.getElementById('myHp').textContent=hpLine;
+    const box=document.getElementById('cActs');box.innerHTML='';
+    const acts=[['⚔ Attack','attack'],['🛡 Defend','defend']];
+    if(knowsMagic)acts.push([mana>0?'🔥 Ember Blast ('+mana+')':'🔥 Ember Blast (spent)','magic']);
+    if(S.bag['ember_charm'])acts.push(['✨ Ember Charm','charm']);
+    if(S.bag['healing_tonic'])acts.push(['🧪 Tonic','tonic']);
+    if(!C.foes.some(f=>f.key==='hollowking'))acts.push(['🏃 Flee','flee']);
+    acts.forEach(([t,a])=>{const b=document.createElement('button');b.className='btn';b.textContent=t;b.onclick=()=>act(a);box.appendChild(b);});
+  }
+
+  // --- combat juice: floating numbers + hit flash ---
+  function floatDmg(anchorId, text, cls){
+    const host=document.getElementById(anchorId); if(!host)return;
+    const el=document.createElement('div'); el.className='dmgnum '+cls; el.textContent=text;
+    el.style.left=(50+(Math.random()*30-15))+'%';
+    host.appendChild(el); setTimeout(()=>el.remove(),1000);
+  }
+  function hitEnemy(){const s=document.getElementById('enemyIco');if(s){s.classList.remove('hitflash');void s.offsetWidth;s.classList.add('hitflash');}}
+
+  function act(a){defending=false;const E=eff();const tgt=leadFoe();
+    if(a==='attack'){let d=E.atk+rnd(-2,4);const cr=Math.random()<E.crit;if(cr)d=Math.round(d*1.8);tgt.hp-=d;clog('You strike the '+tgt.name+' for '+d+(cr?' — CRITICAL!':'')+'!');floatDmg('enemyAnchor',(cr?'★ ':'')+d,cr?'crit':'dealt');hitEnemy();}
+    else if(a==='magic'){
+      if(mana>0){let d=Math.round(E.mag*1.5+rnd(0,4));mana--;if(tgt.magResist){d=Math.round(d*(1-tgt.magResist));}tgt.hp-=d;clog('Ember-flame erupts for '+d+(tgt.magResist?' (resisted)':'')+'! <em>(Focus '+mana+')</em>');floatDmg('enemyAnchor',d,'dealt');hitEnemy();}
+      else{let d=Math.round(E.mag*0.5+rnd(-1,2));if(tgt.magResist)d=Math.round(d*(1-tgt.magResist));tgt.hp-=d;clog('Out of focus — a weak staff strike for '+d+'.');floatDmg('enemyAnchor',d,'dealt');hitEnemy();}
+    }
+    else if(a==='defend'){defending=true;clog('You raise your guard. <em>(incoming damage reduced)</em>');}
+    else if(a==='charm'){const h=useItem('ember_charm',true);clog('The Ember Charm flares — heal '+h+'!');floatDmg('playerAnchor','+'+h,'heal');renderC();return setTimeout(enemyTurn,600);}
+    else if(a==='tonic'){useItem('healing_tonic',true);clog('You drink a Healing Tonic. (+60 HP)');floatDmg('playerAnchor','+60','heal');renderC();return setTimeout(enemyTurn,600);}
+    else if(a==='flee'){if(Math.random()<.5){clog('You slip away!');setTimeout(close,650);return;}clog('You fail to escape!');}
+    // companion attacks after the player
+    if(C.comp&&C.comp.alive&&aliveFoes().length){const ct=leadFoe();let cd=C.comp.atk+rnd(-2,2);ct.hp-=cd;clog(C.comp.name+' strikes the '+ct.name+' for '+cd+'.');floatDmg('enemyAnchor',cd,'dealt');hitEnemy();}
+    renderC();
+    if(!aliveFoes().length){clog(C.foes.length>1?'The last of them falls!':'The '+C.foes[0].name+' falls!');setTimeout(()=>C.onWin&&C.onWin(),700);return;}
+    setTimeout(enemyTurn,600);}
+
+  function enemyTurn(){
+    let total=0;
+    aliveFoes().forEach(f=>{
+      if(C.comp&&C.comp.alive&&Math.random()<0.35){
+        let d=f.atk+rnd(-2,3);C.comp.hp-=d;
+        if(C.comp.hp<=0){C.comp.alive=false;clog(f.name+' downs '+C.comp.name+'!');}
+        else clog(f.name+' hits '+C.comp.name+' for '+d+'.');
+      } else {
+        let d=f.atk+rnd(-2,3);if(defending)d=Math.round(d*.35);S.hp-=d;total+=d;
+        clog(f.name+' hits you for '+Math.round(d)+(defending?' (blocked)':'')+'!');
+      }
+    });
+    if(total>0){floatDmg('playerAnchor','-'+Math.round(total),'taken');const card=document.getElementById('combatCard');card.classList.add('shake');setTimeout(()=>card.classList.remove('shake'),300);}
+    UI.hud();renderC();
+    if(S.hp<=0){Save.clear();setTimeout(()=>dialog('Death','The road ends here, in ash and silence. But every tale of Ashglass is written to be rewritten.',[{t:'Begin Anew',go:()=>location.reload()}]),500);}}
+  function clog(t,clear){const l=document.getElementById('clog');l.innerHTML=(clear?'':l.innerHTML)+'<div>'+t+'</div>';l.scrollTop=l.scrollHeight;}
+
+  function companionName(){return S.flags.companionName||'Bram';}
+
+  // ---- endings ----
+  function ending(variant){Save.clear();UI.show('ending');UI.veilOn();const m=S.morality;let sp='The End of the Tale',tx='';
+    if(variant==='betray'){sp='The Hollow Throne Claims You';tx="You take the King's hand. Ash crowns your brow. Hollowmere burns at dawn, its tribute paid to its new lord. You feel only the cold weight of the crown and a hunger that will never be filled.<br><br><em>Alignment: HOLLOW.</em>";}
+    else if(m>=40){sp='Dawn Over Ashglass';tx="The Hollow King dissolves into harmless smoke. You return a savior — and ask for no statue. For three generations, parents tell children of the kind Emberborn who walked a bitter road and refused to let it harden them.<br><br><em>Alignment: RADIANT.</em>";}
+    else if(m<=-40){sp='A Throne Earned in Blood';tx="You strike the King down — not to save anyone, but because two predators cannot share one throne. You take the crown. The village trades one tyrant for another, and the seat fits you disturbingly well.<br><br><em>Alignment: WICKED.</em>";}
+    else{sp='The Grey Dawn';tx="The King falls. You saved the village, mostly because you were the one standing there when it mattered. You take a fair reward and walk on — neither saint nor devil, just a survivor at the end of a hard road.<br><br><em>Alignment: human.</em>";}
+    if(S.flags.kindRep&&m>0)tx+="<br><br>The healer's family, the hungry child, the freed thief — all light candles for you.";
+    if(S.flags.cruelRep&&m<0)tx+="<br><br>Mothers still hush crying children with your name.";
+    document.getElementById('endSpeaker').textContent=sp;document.getElementById('endText').innerHTML=tx;}
+
+  function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+  // open a loot crate: roll an item for the given area, grant it, show result
+  function openCrate(area){
+    const id=rollLoot(area||'village');
+    const it=ITEMS[id];
+    giveItem(id,1);
+    const rarLabel={common:'Common',uncommon:'Uncommon',rare:'Rare',legendary:'Legendary'}[it.rarity]||'';
+    const rarColor={common:'#c9c4b8',uncommon:'#7ac46a',rare:'#6aa8ff',legendary:'#e8c24a'}[it.rarity]||'#c9c4b8';
+    dialog('A Loot Crate',
+      "You pry the crate open. Inside: <em style=\"color:"+rarColor+"\">"+it.ico+" "+it.name+"</em> <span style=\"color:"+rarColor+";font-size:.8em\">("+rarLabel+")</span><br><span style=\"font-size:.85em;color:#c9b896\">"+it.desc+"</span><br><br>"+
+      (it.type==='consumable'?"Added to your pouch.":"Stored in your pouch — open it to equip."),
+      [{t:"Take it.",go:close}]);
+  }
+
+  return {startNew,pickClass,fireEvent,dialog,close,get S(){return S;},NPCS,alignName,addMorality,loadState,queueSave,
+          eff,ITEMS,giveItem,equip,useItem,owns,heal,rollLoot,openCrate};
+})();
+
+// ---------------- 3D WORLD ----------------
+const World=(function(){
+  let scene,camera,renderer,clock,hero,heroParts={},npcMeshes=[],ground;
+  let yaw=0.6, camDist=11, camHeight=7;
+  const keys={}; let dragging=false,lastX=0;
+  let nearNpc=null, paused=true, raf=null, walkPhase=0;
+  // --- movement state (weighty, accelerated, with run & jump) ---
+  let curSpeed=0;            // current ground speed (eased toward target)
+  let faceAngle=0.6;         // smoothed facing angle (eases toward travel dir)
+  let velY=0, jumpY=0, grounded=true;   // vertical motion for jumping
+  let strideDist=0;          // distance-based stride accumulator (kills foot-sliding)
+  let idlePhase=0;
+  let lastDirX=0, lastDirZ=1; // last movement direction (for coasting to a stop)
+  let WORLD_BOUND=26;                 // legacy square bound (kept for compatibility)
+  let BOUND_X=26, BOUND_Z=26;         // per-area movement bounds (x and z independent)
+  let areaGroup=null;                 // holds all environment objects for the current area
+  let sun, amb, fill;                 // persistent lights (retinted per area)
+  let currentArea='village';
+  let interactables=[];               // per-area interaction points (gate, throne, road-exit)
+
+  function init(){
+    scene=new THREE.Scene();
+    scene.background=new THREE.Color(0x9ec0d8);
+    scene.fog=new THREE.Fog(0x9ec0d8, 34, 64);
+
+    camera=new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 200);
+    renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+    renderer.setSize(innerWidth,innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    clock=new THREE.Clock();
+
+    amb=new THREE.AmbientLight(0xbfd4e0,0.7);scene.add(amb);
+    sun=new THREE.DirectionalLight(0xfff0d0,1.15);
+    sun.position.set(18,26,12);sun.castShadow=true;
+    sun.shadow.mapSize.set(2048,2048);
+    const d=40;sun.shadow.camera.left=-d;sun.shadow.camera.right=d;sun.shadow.camera.top=d;sun.shadow.camera.bottom=-d;
+    sun.shadow.camera.near=1;sun.shadow.camera.far=90;
+    scene.add(sun);
+    fill=new THREE.HemisphereLight(0xcfe6ff,0x4a5a30,0.5);scene.add(fill);
+
+    buildHero();
+    loadArea(Game.S && Game.S.area ? Game.S.area : 'village');
+
+    addEventListener('resize',onResize);
+    addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
+      if(k==='e'&&nearNpc&&!paused){interact();}
+      if(k===' '){e.preventDefault(); if(!paused)tryJump();}});
+    addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+    const cv=document.getElementById('c');
+    cv.addEventListener('mousedown',e=>{dragging=true;lastX=e.clientX;});
+    addEventListener('mouseup',()=>dragging=false);
+    addEventListener('mousemove',e=>{if(dragging){yaw-=(e.clientX-lastX)*0.006;lastX=e.clientX;}});
+    cv.addEventListener('touchstart',e=>{dragging=true;lastX=e.touches[0].clientX;},{passive:true});
+    addEventListener('touchend',()=>dragging=false);
+    addEventListener('touchmove',e=>{if(dragging){yaw-=(e.touches[0].clientX-lastX)*0.006;lastX=e.touches[0].clientX;}},{passive:true});
+
+    loop();
+  }
+
+  // ---- AREA MANAGEMENT ----
+  function disposeGroup(g){ // free GPU memory when tearing down an area
+    g.traverse(o=>{ if(o.geometry)o.geometry.dispose&&o.geometry.dispose();
+      if(o.material){const m=o.material;(Array.isArray(m)?m:[m]).forEach(mm=>mm.dispose&&mm.dispose());}});
+  }
+  function loadArea(name){
+    currentArea=name; if(Game.S)Game.S.area=name;
+    if(areaGroup){ scene.remove(areaGroup); disposeGroup(areaGroup); }
+    areaGroup=new THREE.Group(); scene.add(areaGroup);
+    npcMeshes=[]; villagers=[]; trees=[]; chimneys=[]; interactables=[];
+    rain=null; ashfall=null;             // weather particle systems (rebuilt per area)
+    roadEmbers=null; throneFires=[];      // ambient particle systems — MUST reset or we animate disposed meshes
+    if(name==='village'){
+      WORLD_BOUND=26; BOUND_X=26; BOUND_Z=26;
+      setBase(0x9ec0d8, 0xfff0d0, 1.15, 0.7, 0x4a5a30);
+      buildSky('village'); buildGround('village'); buildVillage(); buildNpcs();
+    } else if(name==='road'){
+      WORLD_BOUND=34; BOUND_X=12; BOUND_Z=34;   // narrow but long corridor — reaches both exits (z=±30)
+      setBase(0x6a5848, 0xd8b890, 0.85, 0.55, 0x2a2218);
+      buildSky('road'); buildGround('road'); buildRoad(); buildWeather('road');
+    } else if(name==='throne'){
+      WORLD_BOUND=24; BOUND_X=9.5; BOUND_Z=24;   // enclosed hall: walls at x=±11, throne approach to z~20, exit at z=-22
+      setBase(0x281c28, 0x9a6acc, 0.6, 0.5, 0x1a1018);
+      buildSky('throne'); buildGround('throne'); buildThroneHall(); buildWeather('throne');
+    }
+    if(Game.S && typeof Game.S.timeOfDay==='number'){ timeOfDay=Game.S.timeOfDay; }
+    applyDayNight(true); // immediately apply current time-of-day tint
+    spawn();
+  }
+  // remember each area's base look; day/night modulates these every frame
+  let baseLook={sky:0x9ec0d8,sun:0xfff0d0,sunInt:1.15,ambInt:0.7,hemi:0x4a5a30};
+  function setBase(skyHex, sunHex, sunInt, ambInt, hemiGround){
+    baseLook={sky:skyHex,sun:sunHex,sunInt:sunInt,ambInt:ambInt,hemi:hemiGround};
+  }
+  // legacy name kept for any external callers
+  function retint(skyHex, sunHex, sunInt, ambInt, hemiGround){ setBase(skyHex,sunHex,sunInt,ambInt,hemiGround); applyDayNight(true); }
+
+  // ---- DAY/NIGHT CYCLE ----
+  // timeOfDay: 0=dawn .. 0.25=noon .. 0.5=dusk .. 0.75=midnight .. 1=dawn
+  let timeOfDay=0.18;                 // start mid-morning
+  const DAY_LENGTH=600;               // seconds for a full cycle (10 min)
+  function tintHex(hex, mulR,mulG,mulB, addR,addG,addB){
+    let r=(hex>>16)&255,g=(hex>>8)&255,b=hex&255;
+    r=Math.max(0,Math.min(255,r*mulR+(addR||0)));
+    g=Math.max(0,Math.min(255,g*mulG+(addG||0)));
+    b=Math.max(0,Math.min(255,b*mulB+(addB||0)));
+    return (r<<16)|(g<<8)|b;
+  }
+  function dayFactors(){
+    // 0=dawn, 0.25=noon (brightest), 0.5=dusk, 0.75=midnight (darkest)
+    const sun=Math.sin(timeOfDay*Math.PI*2);   // +1 at noon(0.25), -1 at midnight(0.75)
+    const bright=0.78+0.22*((sun+1)/2);   // 0.78..1.0 — subtle
+    const dusk=Math.abs(Math.cos(timeOfDay*Math.PI*2));   // peaks at dawn(0) & dusk(0.5)
+    const night=Math.max(0,-sun);                         // 0 by day, up to 1 deep night
+    return {bright,dusk,night};
+  }
+  function applyDayNight(instant){
+    const f=dayFactors();
+    // warm (dawn/dusk) nudges red up/blue down; night cools (blue up, warm down)
+    const warmR=1+0.10*f.dusk-0.06*f.night, warmG=1-0.02*f.night, warmB=1-0.10*f.dusk+0.12*f.night;
+    const sky = tintHex(baseLook.sky, warmR*f.bright, warmG*f.bright, warmB*f.bright, 0,0, f.night*8);
+    const sunC= tintHex(baseLook.sun, warmR, warmG, warmB);
+    scene.background=new THREE.Color(sky);
+    scene.fog=new THREE.Fog(sky, currentArea==='throne'?20:28, currentArea==='road'?46:60);
+    sun.color.setHex(sunC); sun.intensity=baseLook.sunInt*f.bright;
+    amb.intensity=baseLook.ambInt*(0.85+0.15*f.bright);
+    fill.groundColor && fill.groundColor.setHex(baseLook.hemi);
+    // arc the sun across the sky so shadows shift through the day (highest at noon=0.25)
+    const ang=timeOfDay*Math.PI*2;
+    sun.position.set(Math.cos(ang)*22, Math.max(4,Math.sin(ang)*26+6), 12);
+  }
+  function add(o){ areaGroup.add(o); return o; }  // helper: everything environmental goes through here
+
+  function rng(seed){return function(){seed=(seed*9301+49297)%233280;return seed/233280;};}
+  let villagers=[], trees=[], chimneys=[];
+
+  // ---- canvas-generated ground texture ----
+  function grassTexture(){
+    const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+    x.fillStyle='#5f8540';x.fillRect(0,0,256,256);
+    const r=rng(42);
+    for(let i=0;i<2600;i++){const px=r()*256,py=r()*256,l=2+r()*4;
+      const g=Math.floor(60+r()*70);x.strokeStyle='rgba('+Math.floor(g*0.6)+','+g+','+Math.floor(g*0.4)+',0.5)';
+      x.lineWidth=1;x.beginPath();x.moveTo(px,py);x.lineTo(px+(r()-0.5)*3,py-l);x.stroke();}
+    for(let i=0;i<24;i++){x.fillStyle='rgba(120,95,55,'+(0.05+r()*0.08)+')';x.beginPath();x.arc(r()*256,r()*256,8+r()*22,0,7);x.fill();}
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(16,16);return t;
+  }
+
+  function buildGround(area){
+    area=area||'village';
+    let groundMat, decorate=true;
+    if(area==='village'){ groundMat=new THREE.MeshStandardMaterial({map:grassTexture(),roughness:1}); }
+    else if(area==='road'){ groundMat=new THREE.MeshStandardMaterial({map:ashTexture(0x4a4038),roughness:1}); }
+    else { groundMat=new THREE.MeshStandardMaterial({color:0x1d1620,roughness:.85}); decorate=false; }
+    ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),groundMat);
+    ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;add(ground);
+    if(area==='throne'){ buildThroneFloor(); return; }
+    // dirt/ash path
+    const pc=document.createElement('canvas');pc.width=pc.height=128;const pg=pc.getContext('2d');
+    pg.fillStyle=area==='road'?'#5a4a3a':'#8a6f43';pg.fillRect(0,0,128,128);
+    const rr=rng(9);for(let i=0;i<400;i++){pg.fillStyle='rgba('+(90+rr()*60|0)+','+(70+rr()*40|0)+',40,0.4)';pg.beginPath();pg.arc(rr()*128,rr()*128,1+rr()*3,0,7);pg.fill();}
+    const ptex=new THREE.CanvasTexture(pc);ptex.wrapS=ptex.wrapT=THREE.RepeatWrapping;ptex.repeat.set(1,10);
+    const path=new THREE.Mesh(new THREE.PlaneGeometry(4.5,60),new THREE.MeshStandardMaterial({map:ptex,roughness:1}));
+    path.rotation.x=-Math.PI/2;path.position.set(0,0.02,area==='road'?0:9);path.receiveShadow=true;add(path);
+    if(!decorate)return;
+    const r=rng(7);
+    const tuftMat=[0x4f7a3a,0x5e8a44,0x6f9a4e].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:1,flatShading:true}));
+    for(let i=0;i<240;i++){const px=(r()-0.5)*78,pz=(r()-0.5)*78;
+      if(Math.abs(px)<3.2&&pz>-13&&pz<30)continue;
+      const tuft=new THREE.Group();
+      for(let b=0;b<3;b++){const bl=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.55+r()*0.5,4),tuftMat[(r()*3)|0]);
+        bl.position.set((r()-0.5)*0.4,0.3,(r()-0.5)*0.4);bl.rotation.z=(r()-0.5)*0.4;bl.castShadow=true;tuft.add(bl);}
+      tuft.position.set(px,0,pz);add(tuft);}
+    for(let i=0;i<20;i++){const px=(r()-0.5)*70,pz=(r()-0.5)*70;
+      const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(0.4+r()*0.9),
+        new THREE.MeshStandardMaterial({color:0x9a958c,roughness:1,flatShading:true}));
+      rock.position.set(px,0.25,pz);rock.rotation.set(r()*3,r()*3,r()*3);rock.castShadow=true;rock.receiveShadow=true;add(rock);}
+    const fcols=[0xffe24d,0xff7a9c,0xc77dff,0xffffff];
+    for(let i=0;i<55;i++){const px=(r()-0.5)*60,pz=(r()-0.5)*60;if(Math.abs(px)<3&&pz>-12&&pz<26)continue;
+      const col=fcols[(r()*4)|0];
+      const fl=new THREE.Mesh(new THREE.SphereGeometry(0.1,6,6),new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.2}));fl.position.set(px,0.3,pz);add(fl);
+      const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.3),new THREE.MeshStandardMaterial({color:0x3a6a2a}));stem.position.set(px,0.15,pz);add(stem);}
+  }
+
+  // ash/dead ground texture for the grim road
+  function ashTexture(base){
+    const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+    x.fillStyle='#4a4038';x.fillRect(0,0,256,256);const r=rng(13);
+    for(let i=0;i<1800;i++){const g=40+r()*40|0;x.fillStyle='rgba('+g+','+Math.floor(g*0.92)+','+Math.floor(g*0.82)+','+(0.3+r()*0.3)+')';x.fillRect(r()*256,r()*256,1+r()*2,1+r()*2);}
+    for(let i=0;i<30;i++){x.fillStyle='rgba(20,16,14,'+(0.1+r()*0.15)+')';x.beginPath();x.arc(r()*256,r()*256,6+r()*20,0,7);x.fill();}
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(20,20);return t;
+  }
+
+  function buildSky(area){
+    area=area||'village';
+    let top='vec3(0.36,0.56,0.78)',bot='vec3(0.86,0.90,0.86)';
+    if(area==='road'){top='vec3(0.30,0.24,0.20)';bot='vec3(0.62,0.50,0.40)';}
+    if(area==='throne'){top='vec3(0.08,0.04,0.12)';bot='vec3(0.34,0.16,0.34)';}
+    const geo=new THREE.SphereGeometry(90,24,16);
+    const mat=new THREE.ShaderMaterial({side:THREE.BackSide,
+      vertexShader:'varying vec3 vp;void main(){vp=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+      fragmentShader:'varying vec3 vp;void main(){float h=normalize(vp).y*0.5+0.5;vec3 top='+top+';vec3 bot='+bot+';gl_FragColor=vec4(mix(bot,top,h),1.0);}'});
+    add(new THREE.Mesh(geo,mat));
+    if(area==='village'){
+      const r=rng(3);const cm=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,transparent:true,opacity:0.85});
+      for(let i=0;i<10;i++){const g=new THREE.Group();const n=3+(r()*3|0);
+        for(let j=0;j<n;j++){const p=new THREE.Mesh(new THREE.SphereGeometry(2+r()*2.5,8,6),cm);p.position.set(j*2.5-2.5,(r()-0.5),(r()-0.5)*1.5);p.scale.y=0.6;g.add(p);}
+        g.position.set((r()-0.5)*120,28+r()*14,(r()-0.5)*120);add(g);}
+    } else if(area==='road'){
+      const r=rng(5);const cm=new THREE.MeshStandardMaterial({color:0x4a3e36,roughness:1,transparent:true,opacity:0.8});
+      for(let i=0;i<8;i++){const g=new THREE.Group();for(let j=0;j<4;j++){const p=new THREE.Mesh(new THREE.SphereGeometry(3+r()*3,8,6),cm);p.position.set(j*3-4,(r()-0.5),(r()-0.5)*2);p.scale.y=0.5;g.add(p);}
+        g.position.set((r()-0.5)*130,30+r()*12,(r()-0.5)*130);add(g);}
+    }
+  }
+
+  function cottage(x,z,rot,scale){
+    const g=new THREE.Group();
+    const stoneMat=new THREE.MeshStandardMaterial({color:0xa39a8c,roughness:1,flatShading:true});
+    const plasterMat=new THREE.MeshStandardMaterial({color:0xe5d8b8,roughness:.95});
+    const beamMat=new THREE.MeshStandardMaterial({color:0x5a3e26,roughness:1});
+    const base=new THREE.Mesh(new THREE.BoxGeometry(5.2,1.1,4.2),stoneMat);base.position.y=0.55;base.castShadow=true;base.receiveShadow=true;g.add(base);
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(4.9,2.4,3.9),plasterMat);wall.position.y=2.3;wall.castShadow=true;wall.receiveShadow=true;g.add(wall);
+    [[-2.4,1.96],[2.4,1.96],[-2.4,-1.96],[2.4,-1.96]].forEach(([bx,bz])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(0.22,2.4,0.22),beamMat);b.position.set(bx,2.3,bz);g.add(b);});
+    const xbeam=new THREE.Mesh(new THREE.BoxGeometry(4.9,0.2,0.22),beamMat);xbeam.position.set(0,2.3,1.96);g.add(xbeam);
+    const roofMat=new THREE.MeshStandardMaterial({color:0x8a4a32,roughness:1,flatShading:true});
+    const rL=new THREE.Mesh(new THREE.BoxGeometry(5.6,0.3,3.0),roofMat);rL.position.set(0,4.0,1.05);rL.rotation.x=-0.62;rL.castShadow=true;g.add(rL);
+    const rR=new THREE.Mesh(new THREE.BoxGeometry(5.6,0.3,3.0),roofMat);rR.position.set(0,4.0,-1.05);rR.rotation.x=0.62;rR.castShadow=true;g.add(rR);
+    const ridge=new THREE.Mesh(new THREE.BoxGeometry(5.7,0.32,0.4),beamMat);ridge.position.y=4.85;g.add(ridge);
+    const chim=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.6,0.7),stoneMat);chim.position.set(1.6,4.9,0);chim.castShadow=true;g.add(chim);
+    const smoke=new THREE.Group();smoke.position.set(1.6,5.8,0);g.add(smoke);
+    for(let i=0;i<4;i++){const puff=new THREE.Mesh(new THREE.SphereGeometry(0.25,6,6),new THREE.MeshStandardMaterial({color:0xcfcfcf,transparent:true,opacity:0.5}));puff.position.y=i*0.5;smoke.add(puff);}
+    const door=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.9,0.18),beamMat);door.position.set(0,1.45,2.0);g.add(door);
+    [[-1.5,2.5],[1.5,2.5]].forEach(([wx,wy])=>{const w=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.85,0.12),
+      new THREE.MeshStandardMaterial({color:0xffdf9a,emissive:0xffb347,emissiveIntensity:.55}));w.position.set(wx,wy,2.0);g.add(w);
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.0,0.08),beamMat);fr.position.set(wx,wy,1.97);g.add(fr);});
+    g.position.set(x,0,z);g.rotation.y=rot;g.scale.setScalar(scale||1);
+    add(g);g.userData.smoke=smoke;return g;
+  }
+
+  function tree(x,z,s){
+    const g=new THREE.Group();
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.55,3.2,8),
+      new THREE.MeshStandardMaterial({color:0x5a3e26,roughness:1}));trunk.position.y=1.6;trunk.castShadow=true;g.add(trunk);
+    const foliMat=new THREE.MeshStandardMaterial({color:0x4f7a3a,roughness:1,flatShading:true});
+    const foliMat2=new THREE.MeshStandardMaterial({color:0x5e8a44,roughness:1,flatShading:true});
+    [[0,3.6,1.9,foliMat],[0.6,4.4,1.5,foliMat2],[-0.5,4.5,1.4,foliMat2],[0,5.3,1.1,foliMat]].forEach(([fx,fy,fr,mt])=>{
+      const ball=new THREE.Mesh(new THREE.IcosahedronGeometry(fr,1),mt);ball.position.set(fx,fy,(Math.random()-0.5)*0.6);ball.scale.y=0.92;ball.castShadow=true;g.add(ball);});
+    g.position.set(x,0,z);g.scale.setScalar(s||1);g.userData.sway=Math.random()*6;add(g);return g;
+  }
+
+  function buildVillage(){
+    chimneys.push(cottage(-12,-7,0.3,1.1),cottage(7,-9,-0.25,1.25),cottage(16,2,-0.7,1.0),cottage(-16,5,0.6,1.0),cottage(4,12,0.1,0.95));
+    [[-9,-2,1.4],[10,4,1.2],[-18,-4,1.6],[18,-6,1.3],[14,12,1.1],[-14,12,1.25],[0,-14,1.5],[-20,10,1.3],[20,9,1.4]]
+      .forEach(([tx,tz,ts])=>trees.push(tree(tx,tz,ts)));
+    const wmat=new THREE.MeshStandardMaterial({color:0xa9a298,roughness:1,flatShading:true});
+    for(let i=-5;i<=5;i++){if(i===0)continue;const w=new THREE.Mesh(new THREE.BoxGeometry(1.55,1.0,0.8),wmat);
+      w.position.set(i*1.7,0.5,5.5);w.castShadow=true;w.receiveShadow=true;add(w);
+      const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.85,0.3,8),wmat);cap.rotation.z=Math.PI/2;cap.position.set(i*1.7,1.05,5.5);add(cap);}
+    const gmat=new THREE.MeshStandardMaterial({color:0x4a3320,roughness:1});
+    [-1.7,1.7].forEach(px=>{const p=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.45,5,8),gmat);p.position.set(px,2.5,20);p.castShadow=true;add(p);});
+    const lintel=new THREE.Mesh(new THREE.BoxGeometry(4.8,0.7,0.7),gmat);lintel.position.set(0,5,20);lintel.castShadow=true;add(lintel);
+    const well=new THREE.Group();
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(1,1.1,1,12),wmat);ring.position.y=0.5;ring.castShadow=true;well.add(ring);
+    const wr1=new THREE.Mesh(new THREE.BoxGeometry(0.2,2.2,0.2),gmat);wr1.position.set(-0.9,1.6,0);well.add(wr1);
+    const wr2=wr1.clone();wr2.position.x=0.9;well.add(wr2);
+    const wroof=new THREE.Mesh(new THREE.ConeGeometry(1.5,1,4),new THREE.MeshStandardMaterial({color:0x8a4a32,flatShading:true}));wroof.position.y=3.1;wroof.rotation.y=Math.PI/4;well.add(wroof);
+    well.position.set(-4,0,1);add(well);
+    // loot crates (common-leaning)
+    buildCrate(-20,-10,'crate_v1');
+    buildCrate(19,6,'crate_v2');
+    buildCrate(8,16,'crate_v3');
+  }
+
+  // ===== ARTICULATED HUMANOID — shared builder =====
+  function makeHumanoid(opt){
+    opt=opt||{};
+    const skin=opt.skin||0xe8c2a0;
+    const cloth=opt.cloth!=null?opt.cloth:0x6a5a8a;
+    const cloth2=opt.cloth2!=null?opt.cloth2:new THREE.Color(cloth).multiplyScalar(0.7).getHex();
+    const hair=opt.hair!=null?opt.hair:0x3a2a1a;
+    const sMat=new THREE.MeshStandardMaterial({color:skin,roughness:.65});
+    const cMat=new THREE.MeshStandardMaterial({color:cloth,roughness:.85});
+    const c2Mat=new THREE.MeshStandardMaterial({color:cloth2,roughness:.85});
+    const G=new THREE.Group();const parts={};
+    const hips=new THREE.Group();hips.position.y=0.95;G.add(hips);parts.hips=hips;
+    const pelvis=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.35,0.32),c2Mat);pelvis.castShadow=true;hips.add(pelvis);
+    const torso=new THREE.Group();torso.position.y=0.28;hips.add(torso);parts.torso=torso;
+    const chest=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.28,0.7,12),cMat);chest.position.y=0.35;chest.castShadow=true;torso.add(chest);
+    const shoulders=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.78,8),cMat);shoulders.rotation.z=Math.PI/2;shoulders.position.y=0.62;torso.add(shoulders);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,0.15,8),sMat);neck.position.y=0.78;torso.add(neck);
+    const head=new THREE.Group();head.position.y=1.02;torso.add(head);parts.head=head;
+    const skull=new THREE.Mesh(new THREE.SphereGeometry(0.27,16,16),sMat);skull.scale.set(0.92,1.05,0.95);skull.castShadow=true;head.add(skull);
+    const nose=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.12,6),sMat);nose.rotation.x=Math.PI/2;nose.position.set(0,-0.02,0.26);head.add(nose);
+    [-0.1,0.1].forEach(ex=>{const e=new THREE.Mesh(new THREE.SphereGeometry(0.045,8,8),new THREE.MeshStandardMaterial({color:0x222222}));e.position.set(ex,0.03,0.23);head.add(e);});
+    if(!opt.bald){const h=new THREE.Mesh(new THREE.SphereGeometry(0.29,12,12,0,Math.PI*2,0,Math.PI*0.62),new THREE.MeshStandardMaterial({color:hair,roughness:.9}));h.position.y=0.05;h.scale.set(0.95,1.0,0.98);head.add(h);}
+    function arm(side){
+      const a=new THREE.Group();a.position.set(side*0.42,0.6,0);torso.add(a);
+      const up=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.085,0.42,8),cMat);up.position.y=-0.21;up.castShadow=true;a.add(up);
+      const fore=new THREE.Group();fore.position.y=-0.42;a.add(fore);
+      const fm=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.07,0.4,8),sMat);fm.position.y=-0.2;fm.castShadow=true;fore.add(fm);
+      const hand=new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8),sMat);hand.position.y=-0.42;fore.add(hand);
+      return {a,fore,hand};
+    }
+    const aL=arm(-1),aR=arm(1);parts.armL=aL.a;parts.armR=aR.a;parts.foreL=aL.fore;parts.foreR=aR.fore;parts.handR=aR.hand;parts.handL=aL.hand;
+    function leg(side){
+      const l=new THREE.Group();l.position.set(side*0.16,-0.02,0);hips.add(l);
+      const th=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.11,0.5,8),c2Mat);th.position.y=-0.25;th.castShadow=true;l.add(th);
+      const shin=new THREE.Group();shin.position.y=-0.5;l.add(shin);
+      const sh=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,0.48,8),new THREE.MeshStandardMaterial({color:0x33271a,roughness:.9}));sh.position.y=-0.24;sh.castShadow=true;shin.add(sh);
+      const foot=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.12,0.34),new THREE.MeshStandardMaterial({color:0x2a1f14}));foot.position.set(0,-0.46,0.07);foot.castShadow=true;shin.add(foot);
+      return {l,shin};
+    }
+    const lL=leg(-1),lR=leg(1);parts.legL=lL.l;parts.legR=lR.l;parts.shinL=lL.shin;parts.shinR=lR.shin;
+    if(opt.cloak){const cl=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.1,12,1,true),
+      new THREE.MeshStandardMaterial({color:opt.cloak,roughness:.9,side:THREE.DoubleSide}));cl.position.set(0,0.4,-0.1);torso.add(cl);}
+    // weapon worn SHEATHED ON THE BACK (only when one is equipped); diagonal across the shoulders
+    if(opt.weapon){
+      const back=new THREE.Group(); back.position.set(0,0.45,-0.24); back.rotation.z=0.5; torso.add(back); parts.backWeapon=back;
+      const steel=new THREE.MeshStandardMaterial({color:0xc9ccd4,metalness:.6,roughness:.3});
+      const wood=new THREE.MeshStandardMaterial({color:0x6a4a2a,roughness:.8});
+      if(opt.weapon==='sword'){
+        const bl=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.95,0.03),steel);bl.position.y=0.2;back.add(bl);
+        const hilt=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.06,0.06),wood);hilt.position.y=-0.34;back.add(hilt);
+        const grip=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.22,6),wood);grip.position.y=-0.46;back.add(grip);
+      } else if(opt.weapon==='staff'){
+        const st=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,1.4,6),wood);back.add(st);
+        const orb=new THREE.Mesh(new THREE.SphereGeometry(0.13,10,10),new THREE.MeshStandardMaterial({color:0x7ad0ff,emissive:0x3a90ff,emissiveIntensity:.8}));orb.position.y=0.72;back.add(orb);
+      } else if(opt.weapon==='dagger'){
+        const bl=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.42,0.03),steel);bl.position.y=0.05;back.add(bl);
+        const hilt=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.05,0.05),wood);hilt.position.y=-0.18;back.add(hilt);
+      } else if(opt.weapon==='axe'){
+        const handle=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.95,6),wood);handle.position.y=0.1;back.add(handle);
+        const head=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.26,0.05),steel);head.position.set(0.12,0.4,0);back.add(head);
+      } else if(opt.weapon==='maul'){
+        const handle=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.0,6),wood);handle.position.y=0.1;back.add(handle);
+        const head=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.34,0.34),new THREE.MeshStandardMaterial({color:0x9a958c,metalness:.4,roughness:.6}));head.position.y=0.55;back.add(head);
+      }
+    }
+    return {group:G,parts};
+  }
+
+  // map an equipped weapon item -> a back-mounted visual style (null = unarmed)
+  function weaponVisual(){
+    if(!Game.S||!Game.S.equip||!Game.S.equip.weapon) return null;
+    const it=Game.ITEMS&&Game.ITEMS[Game.S.equip.weapon]; if(!it) return null;
+    const ico=it.ico;
+    if(ico==='🔥'||ico==='☀️') return 'staff';
+    if(ico==='🔪') return 'dagger';
+    if(ico==='🪓') return 'axe';
+    if(ico==='🔨') return 'maul';
+    return 'sword'; // swords, blades, frostbrand, kingsbane, etc.
+  }
+
+  function classLook(cls){
+    const weapon=weaponVisual(); // only shows if a weapon is equipped
+    if(cls==='mage')return {skin:0xe8c2a0,cloth:0x4a3a8a,cloth2:0x2a2060,hair:0xddccff,cloak:0x322060,weapon:weapon};
+    if(cls==='rogue')return {skin:0xe0b894,cloth:0x2f5a3a,cloth2:0x1e3d28,hair:0x2a1a10,cloak:0x24452e,weapon:weapon};
+    return {skin:0xe8c2a0,cloth:0x8a3a2a,cloth2:0x5a241a,hair:0x4a3018,cloak:0x6a241a,weapon:weapon};
+  }
+
+  function buildHero(){
+    let px=0,pz=-2,ry=faceAngle;
+    if(hero){ px=hero.position.x; pz=hero.position.z; ry=hero.rotation.y; scene.remove(hero); }
+    const h=makeHumanoid(classLook(Game.S&&Game.S.cls));
+    hero=h.group;heroParts=h.parts;hero.scale.setScalar(1.05);
+    const ring=new THREE.Mesh(new THREE.RingGeometry(0.55,0.75,28),
+      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide}));
+    ring.rotation.x=-Math.PI/2;ring.position.y=0.03;hero.add(ring);heroParts.ring=ring;
+    hero.position.set(px,0,pz);hero.rotation.y=ry;scene.add(hero);
+  }
+
+  function buildNpcs(){
+    npcMeshes.forEach(m=>scene.remove(m.group));npcMeshes=[];
+    const palettes={
+      elder:{skin:0xddb892,cloth:0x6a6258,cloth2:0x4a443c,hair:0xdedede},
+      child:{skin:0xf0cba4,cloth:0x9a8a5a,cloth2:0x6a5e3a,hair:0x6a4a2a},
+      merchant:{skin:0xd8a878,cloth:0x7a3a8a,cloth2:0x52205e,hair:0x2a1a10},
+      thief:{skin:0xc9a884,cloth:0x4a4a42,cloth2:0x2e2e28,hair:0x1a1a1a},
+      guard:{skin:0xd8b090,cloth:0x3a4a6a,cloth2:0x24304a,hair:0x3a2a1a},
+      wizard:{skin:0xdcc0a0,cloth:0x4a3a8a,cloth2:0x2a2060,hair:0xdedede,cloak:0x322060},
+      captive:{skin:0xd0a474,cloth:0x6a5a3a,cloth2:0x44381f,hair:0x3a2a14}
+    };
+    const doneFoe=(id)=>Game.S&&Game.S.done&&Game.S.done[id];
+    Game.NPCS.forEach(n=>{
+      let group, dangerMarker=false;
+      if(n.gate){
+        group=new THREE.Group();
+        const m=new THREE.Mesh(new THREE.CircleGeometry(1.5,28),
+          new THREE.MeshStandardMaterial({color:0xc9a45c,emissive:0xc98a2a,emissiveIntensity:.5,transparent:true,opacity:.8}));
+        m.rotation.x=-Math.PI/2;m.position.y=0.06;group.add(m);
+      } else if(n.shrine){
+        group=new THREE.Group();
+        const stoneMat=new THREE.MeshStandardMaterial({color:0xb8b0a0,roughness:1,flatShading:true});
+        const base=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.85,1.5,8),stoneMat);base.position.y=0.75;base.castShadow=true;group.add(base);
+        const bowl=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.3,0.25,12),stoneMat);bowl.position.y=1.62;group.add(bowl);
+        const top=new THREE.Mesh(new THREE.OctahedronGeometry(0.45),new THREE.MeshStandardMaterial({color:0xe8c87a,emissive:0xc9a45c,emissiveIntensity:.6}));top.position.y=2.4;group.add(top);
+      } else if(n.id==='healer'){
+        group=new THREE.Group();
+        const hut=new THREE.Mesh(new THREE.BoxGeometry(2.6,2.2,2.4),new THREE.MeshStandardMaterial({color:0xcdbf9c,roughness:.95}));hut.position.y=1.1;hut.castShadow=true;group.add(hut);
+        const roof=new THREE.Mesh(new THREE.ConeGeometry(2.2,1.3,4),new THREE.MeshStandardMaterial({color:0x7a3a2a,flatShading:true}));roof.position.y=2.85;roof.rotation.y=Math.PI/4;group.add(roof);
+        const cmat=new THREE.MeshStandardMaterial({color:0xc0302a,emissive:0x801a14,emissiveIntensity:.3});
+        const cv=new THREE.Mesh(new THREE.BoxGeometry(0.25,1,0.1),cmat);cv.position.set(0,1.4,1.25);group.add(cv);
+        const ch=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.25,0.1),cmat);ch.position.set(0,1.5,1.25);group.add(ch);
+      } else if(n.id==='captive'){
+        group=new THREE.Group();
+        const h=makeHumanoid(palettes.captive);group.add(h.group);group.userData.parts=h.parts;
+        // wooden cage bars around him
+        const barMat=new THREE.MeshStandardMaterial({color:0x4a3320,roughness:1});
+        for(let i=0;i<6;i++){const ang=i/6*Math.PI*2;const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,2.4,6),barMat);
+          bar.position.set(Math.cos(ang)*0.95,1.2,Math.sin(ang)*0.95);bar.castShadow=true;group.add(bar);}
+        const capTop=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,0.15,8),barMat);capTop.position.y=2.4;group.add(capTop);
+      } else if(n.foe){
+        group=new THREE.Group();dangerMarker=true;
+        if(n.id==='wolves'){
+          // a den rock + crouched wolf shapes
+          const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(1.3),new THREE.MeshStandardMaterial({color:0x6a6258,roughness:1,flatShading:true}));rock.position.y=0.6;rock.castShadow=true;group.add(rock);
+          for(let i=0;i<2;i++){const w=new THREE.Group();
+            const body=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.22,1.0,7),new THREE.MeshStandardMaterial({color:0x70706a,roughness:.9}));body.rotation.z=Math.PI/2;body.position.y=0.5;body.castShadow=true;w.add(body);
+            const head=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.5,6),new THREE.MeshStandardMaterial({color:0x70706a}));head.rotation.z=-Math.PI/2;head.position.set(0.6,0.55,0);w.add(head);
+            w.position.set(i?1.1:-1.1,0,i?0.6:-0.4);w.rotation.y=i?0.6:-0.5;group.add(w);}
+        } else if(n.id==='brute'){
+          const h=makeHumanoid({skin:0x8a8278,cloth:0x5a4a3a,cloth2:0x3a2e22,bald:true});
+          h.group.scale.setScalar(1.5);group.add(h.group);group.userData.parts=h.parts;
+          const club=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.28,1.6,7),new THREE.MeshStandardMaterial({color:0x4a3320,roughness:1}));
+          club.position.set(1.1,1.4,0);club.rotation.z=0.5;group.add(club);
+        } else if(n.id==='wraith'){
+          const wmat=new THREE.MeshStandardMaterial({color:0xb8b0d8,roughness:1,flatShading:true});
+          const well=new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.0,1.0,10),wmat);well.position.y=0.5;well.castShadow=true;group.add(well);
+          const mist=new THREE.Mesh(new THREE.ConeGeometry(0.7,2.0,8,1,true),new THREE.MeshStandardMaterial({color:0xc8c0e8,transparent:true,opacity:0.4,side:THREE.DoubleSide,emissive:0x6a5a9a,emissiveIntensity:.3}));
+          mist.position.y=1.9;group.add(mist);group.userData.mist=mist;
+        }
+      } else {
+        const look=palettes[n.id]||{skin:0xe0b890,cloth:n.color};
+        const h=makeHumanoid(look);group=h.group;
+        if(n.id==='child'){group.scale.setScalar(0.62);}
+        if(n.id==='elder'){h.parts.torso.rotation.x=0.12;}
+        group.userData.parts=h.parts;
+        group.rotation.y=Math.atan2(-n.pos[0],-n.pos[1]);
+      }
+      const mk=new THREE.Mesh(new THREE.OctahedronGeometry(0.26),new THREE.MeshBasicMaterial({color:dangerMarker?0xff5a4a:0xffe07a}));
+      mk.position.y=n.gate?2.4:(n.id==='healer'?3.6:(n.id==='brute'?3.6:2.7));group.add(mk);
+      group.position.set(n.pos[0],0,n.pos[1]);add(group);
+      npcMeshes.push({def:n,group,marker:mk});
+    });
+    buildVillagers();
+  }
+
+  function buildVillagers(){
+    villagers=[];
+    const looks=[{skin:0xe8c2a0,cloth:0x7a6a4a},{skin:0xd8a878,cloth:0x5a7a8a},{skin:0xf0cba4,cloth:0x8a5a6a},{skin:0xddb892,cloth:0x4a6a4a}];
+    const r=rng(21);
+    for(let i=0;i<4;i++){const h=makeHumanoid(looks[i%looks.length]);
+      h.group.position.set((r()-0.5)*24,0,(r()-0.5)*18-3);h.group.scale.setScalar(0.95);add(h.group);
+      villagers.push({group:h.group,parts:h.parts,phase:r()*6,tx:(r()-0.5)*24,tz:(r()-0.5)*18-3,speed:0.6+r()*0.5});}
+  }
+
+  // a glowing point-trigger (used for area transitions & the throne)
+  function interactable(opt){
+    const g=new THREE.Group();g.position.set(opt.x,0,opt.z);
+    if(opt.mesh)g.add(opt.mesh);
+    const mk=new THREE.Mesh(new THREE.OctahedronGeometry(0.3),new THREE.MeshBasicMaterial({color:opt.color||0xffe07a}));
+    mk.position.y=opt.markY||2.6;g.add(mk);
+    add(g);
+    interactables.push({def:{label:opt.label,event:opt.event,id:opt.id||opt.event,custom:opt.fn,crate:opt.crate},group:g,marker:mk});
+    return g;
+  }
+
+  // a wooden loot crate; one-shot (id tracked in S.done). Disappears once opened.
+  function buildCrate(x,z,id){
+    if(Game.S&&Game.S.done&&Game.S.done[id])return; // already looted
+    const g=new THREE.Group();
+    const wood=new THREE.MeshStandardMaterial({color:0x7a5a32,roughness:.9,flatShading:true});
+    const trim=new THREE.MeshStandardMaterial({color:0x4a3520,roughness:1});
+    const box=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.1,1.1),wood);box.position.y=0.55;box.castShadow=true;box.receiveShadow=true;g.add(box);
+    // metal banding
+    [[-0.45],[0.45]].forEach(([bx])=>{const b=new THREE.Mesh(new THREE.BoxGeometry(0.12,1.16,1.16),trim);b.position.set(bx,0.55,0);g.add(b);});
+    const lidband=new THREE.Mesh(new THREE.BoxGeometry(1.18,0.14,1.18),trim);lidband.position.y=1.05;g.add(lidband);
+    // a soft glow so it reads as lootable
+    const glow=new THREE.Mesh(new THREE.OctahedronGeometry(0.22),new THREE.MeshBasicMaterial({color:0xffd24a}));glow.position.y=1.7;g.add(glow);
+    g.position.set(x,0,z);add(g);
+    interactables.push({def:{label:'Open crate',event:'open_crate',id:id,crate:true},group:g,marker:glow});
+  }
+
+  // ===== THE GRIM ROAD =====
+  function buildRoad(){
+    const r=rng(31);
+    // dead trees lining the road
+    for(let i=0;i<14;i++){const side=i%2?1:-1;const z=-26+i*4+(r()-0.5)*2;const x=side*(5+r()*6);
+      const t=new THREE.Group();
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.35,3+r()*1.5,6),new THREE.MeshStandardMaterial({color:0x2e2620,roughness:1}));
+      trunk.position.y=1.6;trunk.castShadow=true;trunk.rotation.z=(r()-0.5)*0.2;t.add(trunk);
+      for(let b=0;b<4;b++){const br=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.12,1+r(),5),new THREE.MeshStandardMaterial({color:0x2e2620}));
+        br.position.set((r()-0.5),2.5+r(),(r()-0.5));br.rotation.set(r()*2,r()*2,r()*2);t.add(br);}
+      t.position.set(x,0,z);t.userData.sway=r()*6;trees.push(t);add(t);}
+    // ruined pillars / broken walls
+    const stone=new THREE.MeshStandardMaterial({color:0x6a6258,roughness:1,flatShading:true});
+    for(let i=0;i<6;i++){const side=i%2?1:-1;const z=-22+i*7;const h=2+r()*3;
+      const col=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,h,7),stone);col.position.set(side*5.5,h/2,z);col.rotation.z=(r()-0.5)*0.15;col.castShadow=true;add(col);
+      const rubble=new THREE.Mesh(new THREE.DodecahedronGeometry(0.5+r()*0.5),stone);rubble.position.set(side*5.5+(r()-0.5)*2,0.3,z+1);add(rubble);}
+    // scattered bones / ash mounds
+    for(let i=0;i<20;i++){const m=new THREE.Mesh(new THREE.DodecahedronGeometry(0.2+r()*0.4),new THREE.MeshStandardMaterial({color:0x3a342c,roughness:1,flatShading:true}));
+      m.position.set((r()-0.5)*22,0.15,-28+r()*56);add(m);}
+    // drifting ember particles (animated)
+    roadEmbers=new THREE.Group();add(roadEmbers);
+    for(let i=0;i<40;i++){const e=new THREE.Mesh(new THREE.SphereGeometry(0.05,4,4),new THREE.MeshBasicMaterial({color:0xff7a3a,transparent:true,opacity:0.7}));
+      e.position.set((r()-0.5)*26,r()*8,(r()-0.5)*56);e.userData={sp:0.3+r()*0.6,base:e.position.y};roadEmbers.add(e);}
+    // gate back to village (north) and path onward (south)
+    interactable({x:0,z:-30,label:'Back to Hollowmere',event:'toVillage',color:0x9ad0ff,
+      mesh:(()=>{const m=new THREE.Group();const gmat=new THREE.MeshStandardMaterial({color:0x4a3320,roughness:1});
+        [-1.7,1.7].forEach(px=>{const p=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.45,5,8),gmat);p.position.set(px,2.5,0);m.add(p);});
+        const l=new THREE.Mesh(new THREE.BoxGeometry(4.8,0.7,0.7),gmat);l.position.set(0,5,0);m.add(l);return m;})()});
+    interactable({x:0,z:30,label:'The Hollow Throne — enter',event:'toThrone',color:0xff5a8a,
+      mesh:(()=>{const m=new THREE.Group();const dmat=new THREE.MeshStandardMaterial({color:0x1a1018,roughness:1});
+        [-2.2,2.2].forEach(px=>{const p=new THREE.Mesh(new THREE.BoxGeometry(1,7,1),dmat);p.position.set(px,3.5,0);m.add(p);});
+        const arch=new THREE.Mesh(new THREE.BoxGeometry(6,1,1),dmat);arch.position.set(0,7,0);m.add(arch);
+        const glow=new THREE.Mesh(new THREE.PlaneGeometry(3.4,6),new THREE.MeshBasicMaterial({color:0x6a1a3a,transparent:true,opacity:0.5}));glow.position.set(0,3.2,0.05);m.add(glow);return m;})()});
+    // loot crates (better odds than village)
+    buildCrate(-9,-14,'crate_r1');
+    buildCrate(10,4,'crate_r2');
+    buildCrate(-7,18,'crate_r3');
+  }
+
+  // ===== THE GRAND HALL =====
+  function buildThroneFloor(){
+    // checkered black-glass floor
+    const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+    for(let i=0;i<8;i++)for(let j=0;j<8;j++){x.fillStyle=((i+j)%2)?'#241828':'#1a1018';x.fillRect(i*16,j*16,16,16);}
+    const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(8,8);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({map:tex,roughness:.4,metalness:.3}));
+    floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;add(floor);
+  }
+  function buildThroneHall(){
+    const r=rng(41);
+    const stone=new THREE.MeshStandardMaterial({color:0x2a2230,roughness:.9,flatShading:true});
+    const darkStone=new THREE.MeshStandardMaterial({color:0x1e1826,roughness:1,flatShading:true});
+    const glass=new THREE.MeshStandardMaterial({color:0x140e1a,roughness:.3,metalness:.4});
+    const gold=new THREE.MeshStandardMaterial({color:0xc9a45c,metalness:.6,roughness:.4,emissive:0x4a3410,emissiveIntensity:.3});
+    const cloth=new THREE.MeshStandardMaterial({color:0x6a1a3a,roughness:.95,side:THREE.DoubleSide});
+
+    // ---- side walls enclosing the hall (so it reads as an interior) ----
+    [-11,11].forEach(px=>{const w=new THREE.Mesh(new THREE.BoxGeometry(1,16,52),darkStone);w.position.set(px,8,2);w.receiveShadow=true;add(w);});
+    // back wall behind the throne (far +z end)
+    const backWall=new THREE.Mesh(new THREE.BoxGeometry(23,16,1),darkStone);backWall.position.set(0,8,22);backWall.receiveShadow=true;add(backWall);
+    // entrance wall behind the player (near -z end) with a gateway gap is implied by the arch
+    const frontWallL=new THREE.Mesh(new THREE.BoxGeometry(8,16,1),darkStone);frontWallL.position.set(-7.3,8,-24);add(frontWallL);
+    const frontWallR=new THREE.Mesh(new THREE.BoxGeometry(8,16,1),darkStone);frontWallR.position.set(7.3,8,-24);add(frontWallR);
+    // a vaulted ceiling band
+    const ceil=new THREE.Mesh(new THREE.BoxGeometry(23,1,52),darkStone);ceil.position.set(0,15.5,2);add(ceil);
+
+    // ---- long crimson carpet runway down the center ----
+    const carpet=new THREE.Mesh(new THREE.PlaneGeometry(3.4,40),cloth);carpet.rotation.x=-Math.PI/2;carpet.position.set(0,0.03,0);add(carpet);
+    // gold trim lines along the carpet
+    [-1.8,1.8].forEach(px=>{const tr=new THREE.Mesh(new THREE.PlaneGeometry(0.18,40),gold);tr.rotation.x=-Math.PI/2;tr.position.set(px,0.04,0);add(tr);});
+
+    // ---- two rows of grand pillars with capitals & bases ----
+    for(let i=0;i<6;i++){const z=-16+i*7;[-7,7].forEach(px=>{
+      const col=new THREE.Mesh(new THREE.CylinderGeometry(1,1.25,15,12),stone);col.position.set(px,7.5,z);col.castShadow=true;add(col);
+      // fluting suggestion: a thinner inset ring near the top
+      const ring=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,0.5,12),gold);ring.position.set(px,13.5,z);add(ring);
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.1,2.8),stone);cap.position.set(px,15,z);add(cap);
+      const base=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.1,2.8),stone);base.position.set(px,0.55,z);add(base);
+      // a violet brazier at the foot of each pillar (and remember the flames)
+      const bowl=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.3,0.7,8),gold);bowl.position.set(px*0.74,1.1,z);add(bowl);
+      const fire=new THREE.Mesh(new THREE.ConeGeometry(0.4,1.2,7),new THREE.MeshBasicMaterial({color:0x9a3aff,transparent:true,opacity:0.85}));
+      fire.position.set(px*0.74,2.0,z);add(fire);throneFiresPush(fire);
+    });}
+
+    // ---- hanging banners between the pillars ----
+    for(let i=0;i<5;i++){const z=-13+i*7;[-7.6,7.6].forEach(px=>{
+      const ban=new THREE.Mesh(new THREE.PlaneGeometry(1.6,5),cloth);ban.position.set(px,10,z);ban.rotation.y=px<0?0.2:-0.2;add(ban);
+      const sig=new THREE.Mesh(new THREE.CircleGeometry(0.5,16),gold);sig.position.set(px+(px<0?0.05:-0.05),10.5,z+0.05);sig.rotation.y=px<0?0.2:-0.2;add(sig);
+    });}
+
+    // ---- guardian statues flanking the approach to the dais ----
+    [-4.5,4.5].forEach(px=>{
+      const st=new THREE.Group();
+      const ped=new THREE.Mesh(new THREE.BoxGeometry(2,1.4,2),stone);ped.position.y=0.7;st.add(ped);
+      const fig=makeHumanoid({skin:0x4a4458,cloth:0x32303e,cloth2:0x22202a,bald:true});
+      fig.group.scale.setScalar(1.25);fig.group.position.y=1.4;
+      fig.parts.armL.rotation.x=-0.3;fig.parts.armR.rotation.x=-0.3;  // hands resting on a sword
+      st.add(fig.group);
+      const sword=new THREE.Mesh(new THREE.BoxGeometry(0.1,2.2,0.1),new THREE.MeshStandardMaterial({color:0x6a6470,metalness:.4,roughness:.6}));
+      sword.position.set(0,2.0,0.5);st.add(sword);
+      st.position.set(px,0,8);add(st);
+    });
+
+    // ---- stepped dais leading up to the throne (far +z end) ----
+    for(let s=0;s<3;s++){const step=new THREE.Mesh(new THREE.BoxGeometry(11-s*2,0.5,6-s*1.5),glass);step.position.set(0,0.25+s*0.5,17+s*0.6);step.receiveShadow=true;add(step);}
+    const dais=new THREE.Mesh(new THREE.CylinderGeometry(3.6,4.4,1.2,16),glass);dais.position.set(0,2.1,18.5);dais.receiveShadow=true;add(dais);
+
+    // ---- the throne itself (faces -z, toward the approaching player) ----
+    const throne=new THREE.Group();
+    const seat=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.7,2.2),glass);seat.position.y=1.1;throne.add(seat);
+    const seatCushion=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.25,1.8),cloth);seatCushion.position.y=1.5;throne.add(seatCushion);
+    const backrest=new THREE.Mesh(new THREE.BoxGeometry(2.6,5,0.5),glass);backrest.position.set(0,4,1.0);throne.add(backrest);  // +local z = behind seat
+    [-1.2,1.2].forEach(ax=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.5,2.2),glass);arm.position.set(ax,1.7,0);throne.add(arm);});
+    // jagged crown of glass shards rising behind the backrest
+    for(let i=0;i<9;i++){const sh=new THREE.Mesh(new THREE.ConeGeometry(0.25+r()*0.3,2.5+r()*3.5,5),glass);
+      sh.position.set(-3+i*0.75,5+r()*2.5,1.4);sh.rotation.z=(r()-0.5)*0.35;throne.add(sh);}
+    // a faint gold filigree on the backrest
+    const crest=new THREE.Mesh(new THREE.OctahedronGeometry(0.5),gold);crest.position.set(0,5.6,0.9);throne.add(crest);
+    throne.position.set(0,2.7,19);add(throne);
+
+    // ---- scattered rubble & old bones for a haunted, fallen-kingdom feel ----
+    for(let i=0;i<22;i++){const m=new THREE.Mesh(new THREE.DodecahedronGeometry(0.2+r()*0.5),stone);
+      const px=(r()-0.5)*18, pz=-20+r()*38; if(Math.abs(px)<2&&pz<16){continue;}  // keep carpet clear-ish
+      m.position.set(px,0.2,pz);m.rotation.set(r()*3,r()*3,r()*3);m.castShadow=true;add(m);}
+
+    // ---- the throne approach trigger (in front of the dais) ----
+    interactable({x:0,z:13.5,label:'Face the Hollow King',event:'final',color:0xff3a6a,markY:0.1,
+      mesh:(()=>{const m=new THREE.Mesh(new THREE.CircleGeometry(1.8,24),new THREE.MeshBasicMaterial({color:0x6a1a3a,transparent:true,opacity:0.45}));m.rotation.x=-Math.PI/2;m.position.y=0.06;return m;})()});
+
+    // ---- exit archway back to the road (behind the player's spawn, -z end) ----
+    interactable({x:0,z:-22,label:'Retreat to the road',event:'toRoad',color:0x9ad0ff,markY:3.4,
+      mesh:(()=>{const m=new THREE.Group();const dmat=new THREE.MeshStandardMaterial({color:0x120c16,roughness:1});
+        [-2.2,2.2].forEach(px=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.9,7,0.9),dmat);p.position.set(px,3.5,0);m.add(p);});
+        const arch=new THREE.Mesh(new THREE.BoxGeometry(6,1,0.9),dmat);arch.position.set(0,7,0);m.add(arch);
+        const glow=new THREE.Mesh(new THREE.PlaneGeometry(3.4,6.4),new THREE.MeshBasicMaterial({color:0x2a4a6a,transparent:true,opacity:0.4}));glow.position.set(0,3.3,0.05);m.add(glow);
+        return m;})()});
+
+    // loot crates flanking the hall (best odds — rare/legendary possible)
+    buildCrate(-8.5,2,'crate_t1');
+    buildCrate(8.5,2,'crate_t2');
+  }
+  // throneFires may be reset before buildThroneHall runs; push helper guards that
+  function throneFiresPush(f){ if(!Array.isArray(throneFires))throneFires=[]; throneFires.push(f); }
+  let roadEmbers=null, throneFires=[];
+  let rain=null, ashfall=null;
+
+  // ===== WEATHER =====
+  // rain: many thin vertical streaks falling fast (road)
+  // ash:  soft slow flakes drifting down with a sideways sway (throne)
+  function buildWeather(area){
+    const r=rng(area==='road'?71:73);
+    const SPREAD=40, HIGH=22;
+    if(area==='road'){
+      rain=new THREE.Group(); rain.userData.kind='rain'; add(rain);
+      const mat=new THREE.MeshBasicMaterial({color:0xaab4c0,transparent:true,opacity:0.45});
+      for(let i=0;i<160;i++){
+        const drop=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.7,3),mat);
+        drop.position.set((r()-0.5)*SPREAD,r()*HIGH,(r()-0.5)*SPREAD);
+        drop.userData={sp:18+r()*8};
+        rain.add(drop);
+      }
+    } else if(area==='throne'){
+      ashfall=new THREE.Group(); ashfall.userData.kind='ash'; add(ashfall);
+      const mat=new THREE.MeshBasicMaterial({color:0xb8b0a8,transparent:true,opacity:0.5});
+      for(let i=0;i<110;i++){
+        const flake=new THREE.Mesh(new THREE.PlaneGeometry(0.12,0.12),mat);
+        flake.position.set((r()-0.5)*SPREAD,r()*HIGH,(r()-0.5)*SPREAD);
+        flake.userData={sp:0.8+r()*0.9, sway:r()*6, swaySp:0.4+r()*0.5};
+        ashfall.add(flake);
+      }
+    }
+  }
+  // keep weather centered on the hero & recycle particles that fall below ground
+  function animateWeather(dt){
+    const t=clock.elapsedTime, HIGH=22, SPREAD=40;
+    if(rain){
+      rain.position.set(hero.position.x,0,hero.position.z); // follow player
+      rain.children.forEach(d=>{
+        d.position.y-=d.userData.sp*dt;
+        if(d.position.y<0){ d.position.y=HIGH; d.position.x=(Math.random()-0.5)*SPREAD; d.position.z=(Math.random()-0.5)*SPREAD; }
+      });
+    }
+    if(ashfall){
+      ashfall.position.set(hero.position.x,0,hero.position.z);
+      ashfall.children.forEach(fl=>{
+        fl.position.y-=fl.userData.sp*dt;
+        fl.position.x+=Math.sin(t*fl.userData.swaySp+fl.userData.sway)*dt*0.6; // drift
+        fl.rotation.y+=dt; fl.rotation.x+=dt*0.5;
+        if(fl.position.y<0){ fl.position.y=HIGH; fl.position.x=(Math.random()-0.5)*SPREAD; fl.position.z=(Math.random()-0.5)*SPREAD; }
+      });
+    }
+  }
+
+  function interact(){
+    if(!nearNpc)return;
+    const ev=nearNpc.def.event;
+    // area transitions (point-interactables on road/throne, and the village gate when open)
+    if(ev==='toVillage'){ travelTo('village',{x:0,z:18}); return; }
+    if(ev==='toRoad'){ travelTo('road',{x:0,z:24}); return; }
+    if(ev==='toThrone'){ travelTo('throne',{x:0,z:-18,face:0}); return; }
+    // loot crate: roll loot for the current area, mark opened, remove the crate
+    if(ev==='open_crate'){
+      paused=true;
+      const cid=nearNpc.def.id, grp=nearNpc.group;
+      Game.S.done[cid]=true;
+      areaGroup.remove(grp);
+      interactables=interactables.filter(n=>n!==nearNpc);
+      nearNpc=null;
+      Game.openCrate(currentArea);
+      return;
+    }
+    paused=true;
+    // village south gate: if open, it leads to the road (a real place now)
+    if(ev==='gate_check'){
+      if(Game.S.flags.gateOpen){ paused=false; travelTo('road',{x:0,z:-24}); }
+      else { Game.fireEvent('gate_check'); }
+      return;
+    }
+    Game.fireEvent(ev);
+  }
+
+  // walk the hero into a new area, placing them at an entry point
+  function travelTo(area,entry){
+    paused=true;
+    UI.fade(area==='village'?'HOLLOWMERE':area==='road'?'THE ASHEN ROAD':'THE HOLLOW THRONE');
+    if(Game.S){ Game.S.area=area; Game.S.pos={x:entry.x,z:entry.z}; Game.S.facing=(entry.face!==undefined?entry.face:0); Game.queueSave&&Game.queueSave(); }
+    pendingEntry=entry;   // authoritative for this transition — overrides any stale pos
+    setTimeout(()=>{ loadArea(area); }, 700);
+  }
+  let pendingEntry=null;
+
+  function resume(){
+    paused=false;
+    if(!nearNpc||!nearNpc.def)return;
+    if(nearNpc.def.custom)return; // transition triggers are never "done"
+    // mark non-repeatable npc as done — but NOT foe fights (they set done on victory)
+    // and NOT the captive until recruited (handled by the event itself).
+    if(!nearNpc.def.shrine && !nearNpc.def.gate && nearNpc.def.event!=='merchant_shop'
+       && !nearNpc.def.foe && nearNpc.def.id!=='captive'
+       && nearNpc.def.event!=='final' && nearNpc.def.event!=='toVillage' && nearNpc.def.event!=='toRoad' && nearNpc.def.event!=='toThrone'){
+      Game.S.done[nearNpc.def.id]=true;
+    }
+    if(nearNpc.def.id==='captive' && Game.S.flags.companion){ Game.S.done.captive=true; }
+  }
+
+  function spawn(){
+    paused=false;
+    curSpeed=0; velY=0; jumpY=0; grounded=true; strideDist=0; idlePhase=0;
+    const defaults={village:{x:0,z:-2,face:0},road:{x:0,z:-22,face:0},throne:{x:0,z:-18,face:0}};
+    const def=defaults[currentArea]||{x:0,z:-2,face:0};
+    let pos, face;
+    if(pendingEntry){            // a deliberate area transition — always authoritative
+      pos={x:pendingEntry.x,z:pendingEntry.z}; face=(pendingEntry.face!==undefined?pendingEntry.face:def.face); pendingEntry=null;
+    } else if(Game.S && Game.S.pos && typeof Game.S.pos.x==='number'){  // resuming a save
+      pos=Game.S.pos; face=(typeof Game.S.facing==='number'?Game.S.facing:def.face);
+    } else {                     // fresh into this area
+      pos={x:def.x,z:def.z}; face=def.face;
+    }
+    hero.position.set(pos.x,0,pos.z);
+    yaw=face; faceAngle=face; hero.rotation.y=face;
+    // snap camera + look target to avoid a lerp-from-origin swoop on area load
+    camLookX=hero.position.x; camLookZ=hero.position.z;
+    camera.position.set(hero.position.x - Math.sin(yaw)*camDist, camHeight, hero.position.z - Math.cos(yaw)*camDist);
+  }
+  function getPos(){ return hero?{x:+hero.position.x.toFixed(2),z:+hero.position.z.toFixed(2)}:null; }
+  function setPos(x,z){ if(hero)hero.position.set(x,0,z); }
+
+  function onResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
+
+  function loop(){
+    raf=requestAnimationFrame(loop);
+    const dt=Math.min(clock.getDelta(),0.05);
+    // advance day/night even while paused, but only once a game is active
+    if(Game.S && Game.S.cls){
+      timeOfDay=(timeOfDay + dt/DAY_LENGTH) % 1;
+      if(Game.S) Game.S.timeOfDay=timeOfDay;
+      applyDayNight();
+    }
+    if(!paused) updatePlayer(dt);
+    updateCamera();
+    animateMarkers(dt);
+    animateAmbient(dt);
+    animateWeather(dt);
+    animateDust(dt);
+    updateAura();
+    renderer.render(scene,camera);
+    drawMinimap();
+  }
+
+  function tryJump(){
+    if(grounded && !paused){ velY=7.2; grounded=false; }   // launch
+  }
+
+  function updatePlayer(dt){
+    if(!Game.S||!Game.S.cls){ return; }   // no active game yet (title/menu)
+    const E=Game.eff();
+    const running = (keys['shift']||keys['shiftleft']||keys['shiftright']);
+    const baseWalk = 4.2 + (E.spd-6)*0.12;
+    const targetSpeed = baseWalk * (running?1.85:1);
+
+    // input -> desired world direction (camera-relative)
+    let f=0,r=0;
+    if(keys['w']||keys['arrowup'])f+=1;
+    if(keys['s']||keys['arrowdown'])f-=1;
+    if(keys['d']||keys['arrowright'])r+=1;
+    if(keys['a']||keys['arrowleft'])r-=1;
+    const wantMove = !!(f||r);
+
+    let dirX=0,dirZ=0;
+    if(wantMove){
+      const fx=Math.sin(yaw), fz=Math.cos(yaw);
+      const rx=-Math.cos(yaw), rz=Math.sin(yaw);   // screen-right (fixes A/D inversion)
+      dirX=fx*f+rx*r; dirZ=fz*f+rz*r;
+      const len=Math.hypot(dirX,dirZ)||1; dirX/=len; dirZ/=len;
+    }
+
+    // --- accelerate / decelerate toward target (weighty start & stop) ---
+    const goal = wantMove ? targetSpeed : 0;
+    const accel = wantMove ? 14 : 18;   // brisk pickup, slightly faster braking
+    curSpeed += (goal-curSpeed) * Math.min(1, accel*dt);
+    if(curSpeed<0.02) curSpeed=0;
+
+    // move along the (held) facing direction; remember last dir while moving
+    if(wantMove){ lastDirX=dirX; lastDirZ=dirZ; }
+    if(curSpeed>0){
+      const mx=(wantMove?dirX:lastDirX), mz=(wantMove?dirZ:lastDirZ);
+      hero.position.x=Math.max(-BOUND_X,Math.min(BOUND_X,hero.position.x+mx*curSpeed*dt));
+      hero.position.z=Math.max(-BOUND_Z,Math.min(BOUND_Z,hero.position.z+mz*curSpeed*dt));
+      // distance-based stride: phase advances with distance, so feet match ground (no sliding)
+      strideDist += curSpeed*dt;
+    }
+
+    // --- smooth turning toward travel direction ---
+    if(wantMove){
+      const want=Math.atan2(dirX,dirZ);
+      let diff=want-faceAngle;
+      while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
+      faceAngle += diff*Math.min(1,12*dt);   // ease, don't snap
+    }
+    hero.rotation.y=faceAngle;
+
+    // --- vertical / jump arc ---
+    const wasAir=!grounded;
+    if(!grounded){
+      velY -= 20*dt;                 // gravity
+      jumpY += velY*dt;
+      if(jumpY<=0){ jumpY=0; velY=0; grounded=true; if(wasAir) dustBurst(6); } // landing puff
+    }
+    hero.position.y = jumpY;
+
+    // --- footstep dust while running on the ground ---
+    if(grounded && running && curSpeed>2){
+      const step=Math.floor(strideDist*2.0);   // ~2 steps per metre
+      if(step!==lastStep){ lastStep=step; dustPuff(); }
+    }
+
+    animateHero(dt, curSpeed/Math.max(0.001,baseWalk), running, wantMove);
+    proximity();
+  }
+  let lastStep=0;
+
+  // ---- footstep dust (pooled 3D puffs at the hero's feet) ----
+  let dustPool=[], dustGroup=null;
+  function ensureDust(){
+    if(dustGroup && dustGroup.parent===scene) return;
+    dustGroup=new THREE.Group(); scene.add(dustGroup); dustPool=[];
+    const mat=new THREE.MeshBasicMaterial({color:0xcdbfa0,transparent:true,opacity:0});
+    for(let i=0;i<14;i++){const p=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,6),mat.clone());
+      p.visible=false;p.userData={life:0};dustGroup.add(p);dustPool.push(p);}
+  }
+  function spawnDustParticle(vx,vz,size){
+    ensureDust();
+    const p=dustPool.find(d=>!d.visible); if(!p)return;
+    p.visible=true; p.userData={life:0.6,vx:vx,vy:0.8+Math.random()*0.6,vz:vz};
+    p.scale.setScalar(size||1);
+    p.position.set(hero.position.x+(Math.random()-0.5)*0.3, 0.12, hero.position.z+(Math.random()-0.5)*0.3);
+    p.material.opacity=0.55;
+  }
+  function dustPuff(){ spawnDustParticle((Math.random()-0.5)*0.6,(Math.random()-0.5)*0.6,0.9); }
+  function dustBurst(n){ for(let i=0;i<(n||5);i++){const a=Math.random()*Math.PI*2;spawnDustParticle(Math.cos(a)*1.2,Math.sin(a)*1.2,1.2);} }
+  function animateDust(dt){
+    if(!dustPool.length)return;
+    dustPool.forEach(p=>{ if(!p.visible)return;
+      p.userData.life-=dt; if(p.userData.life<=0){p.visible=false;return;}
+      p.position.x+=p.userData.vx*dt; p.position.z+=p.userData.vz*dt; p.position.y+=p.userData.vy*dt;
+      p.userData.vy-=2.4*dt;                       // settle
+      p.material.opacity=Math.max(0,p.userData.life*0.9);
+      p.scale.multiplyScalar(1+dt*1.6);            // expand as it fades
+    });
+  }
+
+  // realistic, weight-aware animation driven by speed & stride distance
+  function animateHero(dt, speedRatio, running, moving){
+    const hp=heroParts; if(!hp.legL) return;
+    const t=clock.elapsedTime;
+    // stride frequency from distance: 1 full cycle per ~1.5m walked
+    const phase = strideDist * (running?3.4:4.0);
+    const amp = Math.min(1, speedRatio) * (running?1.15:0.85);
+
+    if(!grounded){
+      // airborne pose: tuck legs, raise arms a touch
+      const up = velY>0;
+      hp.legL.rotation.x = up?-0.5:0.3; hp.legR.rotation.x = up?-0.7:0.2;
+      hp.shinL.rotation.x = 0.8; hp.shinR.rotation.x = 0.5;
+      hp.armL.rotation.x = up?-1.2:-0.4; hp.armR.rotation.x = up?-1.0:-0.4;
+      hp.armL.rotation.z = 0.2; hp.armR.rotation.z = -0.2;
+      hp.hips.position.y = 0.95;
+      if(hp.torso) hp.torso.rotation.x = up?0.12:-0.06;
+      return;
+    }
+    if(hp.armL.rotation.z) { hp.armL.rotation.z*=0.8; hp.armR.rotation.z*=0.8; }
+
+    if(moving || curSpeed>0.05){
+      const sw=Math.sin(phase);
+      const swCos=Math.cos(phase);
+      // thighs swing fore/aft
+      hp.legL.rotation.x = sw*0.85*amp;
+      hp.legR.rotation.x = -sw*0.85*amp;
+      // knees bend most as the leg passes under & swings back (weighty)
+      hp.shinL.rotation.x = Math.max(0, -sw)*1.1*amp + Math.max(0,-swCos)*0.2;
+      hp.shinR.rotation.x = Math.max(0,  sw)*1.1*amp + Math.max(0, swCos)*0.2;
+      // arms counter-swing the legs, elbows lead
+      hp.armL.rotation.x = -sw*0.7*amp;
+      hp.armR.rotation.x =  sw*0.7*amp;
+      if(hp.foreL){ hp.foreL.rotation.x = Math.max(0,-sw)*0.4; hp.foreR.rotation.x = Math.max(0,sw)*0.4; }
+      // vertical bob: two bounces per stride, scaled by speed
+      hp.hips.position.y = 0.95 + Math.abs(Math.sin(phase))*0.06*amp;
+      // lean into movement + slight roll
+      if(hp.torso){ hp.torso.rotation.x = -0.05 - speedRatio*0.10; hp.torso.rotation.z = sw*0.04*amp; }
+      if(hp.head) hp.head.rotation.z = -sw*0.03*amp;
+      idlePhase=0;
+    } else {
+      // --- idle: breathing, weight-shift, arms settle ---
+      idlePhase += dt;
+      const br=Math.sin(idlePhase*1.6);
+      hp.legL.rotation.x*=0.85; hp.legR.rotation.x*=0.85;
+      hp.shinL.rotation.x*=0.85; hp.shinR.rotation.x*=0.85;
+      hp.armL.rotation.x = (hp.armL.rotation.x||0)*0.85 + (-0.04+br*0.03)*0.15;
+      hp.armR.rotation.x = (hp.armR.rotation.x||0)*0.85 + (-0.04-br*0.03)*0.15;
+      if(hp.foreL){hp.foreL.rotation.x*=0.85;hp.foreR.rotation.x*=0.85;}
+      hp.hips.position.y = 0.95 + br*0.012;                 // breathe
+      if(hp.torso){ hp.torso.rotation.x = br*0.015; hp.torso.rotation.z = Math.sin(idlePhase*0.8)*0.02; } // weight shift
+      if(hp.head) hp.head.rotation.y = Math.sin(idlePhase*0.5)*0.06;
+    }
+  }
+
+  function proximity(){
+    let best=null,bestD=9;
+    const checkList=npcMeshes.concat(interactables);
+    checkList.forEach(n=>{
+      if(n.def.id && Game.S&&Game.S.done&&Game.S.done[n.def.id] && !n.def.shrine && !n.def.gate && n.def.event!=='merchant_shop' && !n.def.custom) return;
+      const dx=n.group.position.x-hero.position.x,dz=n.group.position.z-hero.position.z;
+      const d=dx*dx+dz*dz;if(d<bestD){bestD=d;best=n;}});
+    nearNpc=best;
+    const p=document.getElementById('prompt');
+    if(best){p.style.display='block';document.getElementById('promptText').textContent=best.def.label;}
+    else p.style.display='none';
+  }
+
+  function updateCamera(){
+    // desired camera position behind the hero (orbit angle = yaw)
+    const tx=hero.position.x - Math.sin(yaw)*camDist;
+    const tz=hero.position.z - Math.cos(yaw)*camDist;
+    // ease position (slightly snappier when moving fast so it keeps up)
+    const ease = 0.08 + Math.min(0.06, curSpeed*0.01);
+    camera.position.x+=(tx-camera.position.x)*ease;
+    camera.position.z+=(tz-camera.position.z)*ease;
+    // subtle camera height bob while walking, settles when idle
+    const bob = grounded ? Math.sin(strideDist*8)*Math.min(0.12, curSpeed*0.02) : 0;
+    camera.position.y+=((camHeight+bob)-camera.position.y)*0.1;
+    // look slightly ahead of the hero in their travel direction (look-ahead)
+    const laX=hero.position.x + lastDirX*curSpeed*0.18;
+    const laZ=hero.position.z + lastDirZ*curSpeed*0.18;
+    camLookX += (laX-camLookX)*0.12;
+    camLookZ += (laZ-camLookZ)*0.12;
+    camera.lookAt(camLookX, hero.position.y+1.6, camLookZ);
+  }
+  let camLookX=0, camLookZ=0;
+
+  function animateMarkers(dt){const t=clock.elapsedTime;
+    npcMeshes.forEach(n=>{const done=Game.S&&Game.S.done[n.def.id]&&!n.def.shrine&&!n.def.gate&&n.def.event!=='merchant_shop';
+      n.marker.visible=!done;
+      n.marker.rotation.y+=dt*2;n.marker.position.y=(n.def.gate?2.4:(n.def.id==='healer'?3.6:2.7))+Math.sin(t*2+n.group.position.x)*0.15;});
+    interactables.forEach(n=>{n.marker.rotation.y+=dt*2;
+      if(n.def.crate){n.marker.position.y=1.7+Math.sin(t*2.5+n.group.position.x)*0.12;}});
+  }
+
+  function animateAmbient(dt){
+    const t=clock.elapsedTime;
+    villagers.forEach(v=>{
+      const dx=v.tx-v.group.position.x, dz=v.tz-v.group.position.z;
+      const dist=Math.hypot(dx,dz);
+      if(dist<0.6){ v.tx=(Math.random()-0.5)*26; v.tz=(Math.random()-0.5)*18-3; v.idle=1.2+Math.random()*2; }
+      if(v.idle>0){v.idle-=dt; v.phase*=0.9;}
+      else{ const nx=dx/dist, nz=dz/dist;
+        v.group.position.x+=nx*v.speed*dt; v.group.position.z+=nz*v.speed*dt;
+        v.group.rotation.y=Math.atan2(nx,nz); v.phase+=dt*8; }
+      const sw=Math.sin(v.phase)*0.5, p=v.parts;
+      if(p.legL){p.legL.rotation.x=sw;p.legR.rotation.x=-sw;p.armL.rotation.x=-sw*0.7;p.armR.rotation.x=sw*0.7;
+        p.hips.position.y=0.95+Math.abs(Math.sin(v.phase))*0.03;}
+    });
+    npcMeshes.forEach(n=>{const pp=n.group.userData.parts;if(pp&&pp.torso){pp.torso.position.y=0.28+Math.sin(t*1.5+n.group.position.z)*0.012;}});
+    trees.forEach(tr=>{tr.rotation.z=Math.sin(t*0.7+tr.userData.sway)*0.02;});
+    chimneys.forEach(ch=>{const sm=ch.userData.smoke;if(!sm)return;
+      sm.children.forEach((puff,i)=>{puff.position.y=((t*0.6+i*0.5)%2.2);puff.material.opacity=0.5*(1-puff.position.y/2.2);
+        const s=0.5+puff.position.y*0.3;puff.scale.setScalar(s);});});
+    // road: drifting embers rising and looping
+    if(roadEmbers){roadEmbers.children.forEach(e=>{e.position.y+=e.userData.sp*dt*4;if(e.position.y>9)e.position.y=0;
+      e.material.opacity=0.3+0.4*Math.sin(t*3+e.position.x);});}
+    // throne: flickering violet braziers
+    throneFires.forEach((f,i)=>{const s=1+0.25*Math.sin(t*8+i*2);f.scale.set(1,s,1);f.material.opacity=0.6+0.3*Math.sin(t*10+i);});
+  }
+
+  function updateAura(){
+    if(!Game.S||!heroParts.ring)return;const m=Game.S.morality;const a=Math.min(0.6,Math.abs(m)/100*0.7);
+    heroParts.ring.material.opacity=a;
+    heroParts.ring.material.color.setHex(m>=0?0x6a8cb5:0x7a3a5a);
+    const s=1+0.08*Math.sin(clock.elapsedTime*3);heroParts.ring.scale.setScalar(s);}
+
+  // minimap
+  const mmcv=document.getElementById('mmcv'),mmx=mmcv.getContext('2d');
+  function drawMinimap(){
+    if(!hero)return;const W=120,scale=1.7;mmx.clearRect(0,0,W,W);
+    const bg=currentArea==='village'?'#3a4a2a':currentArea==='road'?'#3a2e22':'#1d1622';
+    mmx.fillStyle=bg;mmx.fillRect(0,0,W,W);
+    const cx=W/2,cy=W/2;
+    npcMeshes.forEach(n=>{const dx=(n.group.position.x-hero.position.x)*scale,dz=(n.group.position.z-hero.position.z)*scale;
+      const done=Game.S&&Game.S.done[n.def.id]&&!n.def.shrine&&!n.def.gate&&n.def.event!=='merchant_shop';
+      mmx.fillStyle=n.def.gate?'#e8c87a':n.def.foe?'#ff5a4a':done?'#555':'#ffe07a';
+      mmx.beginPath();mmx.arc(cx+dx,cy+dz,n.def.gate?4:3,0,7);mmx.fill();});
+    interactables.forEach(n=>{const dx=(n.group.position.x-hero.position.x)*scale,dz=(n.group.position.z-hero.position.z)*scale;
+      mmx.fillStyle=n.def.event==='final'?'#ff3a6a':'#9ad0ff';
+      mmx.beginPath();mmx.arc(cx+dx,cy+dz,4,0,7);mmx.fill();});
+    // player cursor — drawn explicitly along facing dir (canvas: +x right, +z world = +y down)
+    const ry=hero.rotation.y;
+    const fx=Math.sin(ry), fy=Math.cos(ry);   // forward on canvas
+    const px=-fy, py=fx;                        // perpendicular (right side)
+    mmx.fillStyle='#e6453a';
+    mmx.beginPath();
+    mmx.moveTo(cx+fx*7, cy+fy*7);                       // tip (points where you face)
+    mmx.lineTo(cx-fx*4+px*4, cy-fy*4+py*4);             // back-right
+    mmx.lineTo(cx-fx*4-px*4, cy-fy*4-py*4);             // back-left
+    mmx.closePath();mmx.fill();
+  }
+
+  return {init,spawn,resume,rebuildHero:buildHero,getPos,setPos,loadArea};
+})();
+
+// ---------------- UI GLUE ----------------
+const UI=(function(){
+  function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    if(id)document.getElementById(id).classList.add('active');}
+  function veilOn(){document.getElementById('veil').classList.add('active');}
+  function veilOff(){document.getElementById('veil').classList.remove('active');}
+  function startCreate(){Game.startNew();show('create');}
+
+  function beginWorld(fromLoad){
+    show(null);veilOff();
+    document.getElementById('hud').classList.add('active');
+    World.rebuildHero();                       // (re)build hero to chosen class
+    World.loadArea(Game.S.area||'village');     // build the area & spawn at saved/entry pos
+    hud();
+    fade(fromLoad?'WELCOME BACK':'HOLLOWMERE');
+    if(!fromLoad){ setTimeout(()=>{ if(Game.S) Game.fireEvent('intro'); }, 600); }
+  }
+
+  // load an existing save and drop straight into the world
+  function loadGame(){
+    const blob=Save.read();
+    if(!blob){ return; }
+    if(Game.loadState(blob)){ beginWorld(true); }
+  }
+
+  // refresh the title screen's Continue button based on whether a save exists
+  function refreshTitle(){
+    const btn=document.getElementById('continueBtn');
+    if(!btn)return;
+    const m=Save.meta();
+    if(m){
+      const cls=m.cls==='warrior'?'Sellsword':m.cls==='mage'?'Ashcaller':'Vagrant';
+      btn.style.display='';
+      btn.querySelector('.sub').textContent='Lv '+m.lvl+' '+cls;
+    } else { btn.style.display='none'; }
+  }
+
+  function abandonRun(){
+    // returns to title WITHOUT deleting the save — Continue will still appear.
+    if(confirm('Return to the title screen? Your progress is saved and you can Continue from here.')){
+      location.reload();
+    }
+  }
+
+  function flashSaved(){
+    const el=document.getElementById('savedTag');if(!el)return;
+    el.style.opacity='1';
+    clearTimeout(flashSaved._t);
+    flashSaved._t=setTimeout(()=>{el.style.opacity='0';},1100);
+  }
+
+  // ---- inventory panel ----
+  let invOpen=false;
+  function toggleInv(){ invOpen=!invOpen; const p=document.getElementById('invPanel');
+    if(invOpen){ renderInv(); p.style.display='flex'; } else { p.style.display='none'; } }
+  function slotCell(label,id){
+    const I=Game.ITEMS;
+    const it=id?I[id]:null;
+    const inner=it?('<div style="font-size:26px;">'+it.ico+'</div><div style="font-size:.7rem;color:var(--parchment);">'+it.name+'</div><div style="font-size:.62rem;color:var(--gold-bright);">'+(it.desc||'')+'</div>')
+                   :('<div style="font-size:26px;opacity:.3;">∅</div><div style="font-size:.62rem;color:var(--parchment-dark);">empty</div>');
+    return '<div style="width:130px;min-height:96px;border:1px solid var(--gold);background:rgba(13,10,7,.5);padding:.5rem;text-align:center;border-radius:5px;">'
+      +'<div style="font-family:Cinzel;font-size:.6rem;letter-spacing:.12em;color:var(--gold);margin-bottom:.3rem;">'+label+'</div>'+inner+'</div>';
+  }
+  function renderInv(){
+    const S=Game.S,I=Game.ITEMS,E=Game.eff();
+    document.getElementById('invStats').innerHTML=
+      'ATK <b style="color:var(--gold-bright)">'+E.atk+'</b> · MAG <b style="color:var(--gold-bright)">'+E.mag+'</b> · SPD <b style="color:var(--gold-bright)">'+E.spd+'</b> · CRIT <b style="color:var(--gold-bright)">'+Math.round(E.crit*100)+'%</b> · Max HP <b style="color:var(--gold-bright)">'+E.maxHp+'</b>';
+    document.getElementById('invEquip').innerHTML=
+      slotCell('WEAPON',S.equip.weapon)+slotCell('ARMOR',S.equip.armor)+slotCell('TRINKET',S.equip.trinket);
+    // bag
+    const bag=document.getElementById('invBag');bag.innerHTML='';
+    const ids=Object.keys(S.bag);
+    if(!ids.length){bag.innerHTML='<div style="color:var(--parchment-dark);font-style:italic;padding:.5rem;">Your pouch is empty.</div>';}
+    ids.forEach(id=>{const it=I[id];if(!it)return;const n=S.bag[id];
+      const equippable=it.slot;
+      const btn=document.createElement('button');btn.className='btn';btn.style.cssText='width:130px;min-height:96px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.5rem;';
+      btn.innerHTML='<div style="font-size:24px;">'+it.ico+'</div><div style="font-size:.72rem;text-transform:none;font-family:EB Garamond;">'+it.name+(n>1?' ×'+n:'')+'</div><div style="font-size:.6rem;color:var(--gold-bright);text-transform:none;font-family:EB Garamond;">'+(equippable?'tap to equip':'tap to use')+'</div>';
+      btn.onclick=()=>{ if(equippable){Game.equip(id);} else {Game.useItem(id,false);} renderInv(); };
+      bag.appendChild(btn);});
+  }
+
+  function hud(){
+    const S=Game.S;if(!S)return;
+    document.getElementById('hpBar').style.width=Math.max(0,S.hp/S.maxHp*100)+'%';
+    document.getElementById('xpBar').style.width=(S.xp/S.xpNext*100)+'%';
+    document.getElementById('lvlNum').textContent=S.lvl;
+    document.getElementById('goldNum').textContent=S.gold;
+    document.getElementById('questText').textContent=S.quest;
+    document.getElementById('alignName').textContent=Game.alignName();
+    document.getElementById('moralMark').style.left=((S.morality+100)/2)+'%';
+  }
+  function fade(txt){const el=document.getElementById('fadeMsg');el.textContent=txt;
+    el.animate([{opacity:0,transform:'translateX(-50%) translateY(10px)'},{opacity:1,transform:'translateX(-50%) translateY(0)'},{opacity:1},{opacity:0}],{duration:1900,easing:'ease-out'});}
+  return {show,veilOn,veilOff,startCreate,beginWorld,loadGame,refreshTitle,abandonRun,flashSaved,hud,fade,toggleInv};
+})();
+
+// ---------------- BOOT ----------------
+window.addEventListener('load',()=>{
+  try{
+    World.init();
+    document.getElementById('loader').style.display='none';
+    UI.refreshTitle();   // show Continue if a save exists
+    // periodic position autosave while exploring (movement doesn't trigger stat saves)
+    setInterval(()=>{ if(Game.S && Game.S.cls) Game.queueSave(); }, 8000);
+    // save on tab close / refresh
+    window.addEventListener('beforeunload',()=>{ if(Game.S && Game.S.cls) Game.queueSave(); });
+  }catch(e){
+    document.getElementById('loader').innerHTML='<div class="t">Failed to load 3D: '+e.message+'</div>';
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>
